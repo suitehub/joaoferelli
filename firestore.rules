@@ -1,0 +1,164 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // 1. Global Safety Net (Default Deny Catch-all)
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // --- Core Primitive Definition Helpers ---
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    // --- Entity Validation Helpers ---
+
+    function isValidAgendaItem(data) {
+      return data.keys().hasAll(['id', 'title', 'date', 'status', 'priority'])
+        && data.keys().size() <= 7
+        && data.id is string && data.id.size() <= 128
+        && data.title is string && data.title.size() <= 200
+        && data.date is string && data.date.size() <= 30
+        && (data.status == 'todo' || data.status == 'doing' || data.status == 'done')
+        && (data.priority == 'low' || data.priority == 'medium' || data.priority == 'high')
+        && (!data.keys().hasAny(['time']) || (data.time is string && data.time.size() <= 10))
+        && (!data.keys().hasAny(['description']) || (data.description is string && data.description.size() <= 2000));
+    }
+
+    function isValidRecadoItem(data) {
+      return data.keys().hasAll(['id', 'title', 'text', 'color', 'priority', 'isPinned', 'createdAt'])
+        && data.keys().size() == 7
+        && data.id is string && data.id.size() <= 128
+        && data.title is string && data.title.size() <= 200
+        && data.text is string && data.text.size() <= 5000
+        && (data.color == 'yellow' || data.color == 'blue' || data.color == 'green' || data.color == 'pink' || data.color == 'purple' || data.color == 'orange' || data.color == 'slate')
+        && (data.priority == 'low' || data.priority == 'medium' || data.priority == 'high')
+        && data.isPinned is bool
+        && data.createdAt is string && data.createdAt.size() <= 50;
+    }
+
+    function isValidMemoriaItem(data) {
+      return data.keys().hasAll(['id', 'imageUrl', 'caption', 'date', 'expiration', 'createdAt', 'isShared'])
+        && data.keys().size() == 7
+        && data.id is string && data.id.size() <= 128
+        && data.imageUrl is string && data.imageUrl.size() <= 1048576 // Supports base64 or long image link
+        && data.caption is string && data.caption.size() <= 2000
+        && data.date is string && data.date.size() <= 30
+        && (data.expiration == 'permanent' || data.expiration == '24h' || data.expiration == '7d')
+        && data.createdAt is string && data.createdAt.size() <= 50
+        && data.isShared is bool;
+    }
+
+    function isValidCartinhaItem(data) {
+      return data.keys().hasAll(['id', 'title', 'content', 'sender', 'recipient', 'date', 'deliverAt', 'stampType', 'sealColor', 'isOpened'])
+        && data.keys().size() == 10
+        && data.id is string && data.id.size() <= 128
+        && data.title is string && data.title.size() <= 200
+        && data.content is string && data.content.size() <= 10000
+        && data.sender is string && data.sender.size() <= 100
+        && data.recipient is string && data.recipient.size() <= 100
+        && data.date is string && data.date.size() <= 30
+        && data.deliverAt is string && data.deliverAt.size() <= 30
+        && (data.stampType == 'floral' || data.stampType == 'crown' || data.stampType == 'anchor' || data.stampType == 'heart' || data.stampType == 'retro')
+        && (data.sealColor == 'burgundy' || data.sealColor == 'gold' || data.sealColor == 'navy' || data.sealColor == 'emerald' || data.sealColor == 'bronze')
+        && data.isOpened is bool;
+    }
+
+    function isValidChatMessage(data) {
+      return data.keys().hasAll(['id', 'sender', 'senderName', 'text', 'timestamp'])
+        && data.keys().size() == 5
+        && data.id is string && data.id.size() <= 128
+        && (data.sender == 'owner' || data.sender == 'guest')
+        && data.senderName is string && data.senderName.size() <= 100
+        && data.text is string && data.text.size() <= 5000
+        && data.timestamp is string && data.timestamp.size() <= 50;
+    }
+
+    function isValidConversaRoom(data) {
+      return data.keys().hasAll(['id', 'name', 'avatarColor', 'description', 'createdAt'])
+        && data.keys().size() <= 6
+        && data.id is string && data.id.size() <= 128
+        && data.name is string && data.name.size() <= 100
+        && data.avatarColor is string && data.avatarColor.size() <= 50
+        && data.description is string && data.description.size() <= 500
+        && data.createdAt is string && data.createdAt.size() <= 50
+        && (!data.keys().hasAny(['personaPrompt']) || (data.personaPrompt is string && data.personaPrompt.size() <= 5000));
+    }
+
+    function isValidConteudoFile(data) {
+      return data.keys().hasAll(['id', 'name', 'category', 'size', 'uploadDate'])
+        && data.keys().size() <= 7
+        && data.id is string && data.id.size() <= 128
+        && data.name is string && data.name.size() <= 200
+        && (data.category == 'sermoes' || data.category == 'estudos' || data.category == 'aulas' || data.category == 'pdfs' || data.category == 'downloads' || data.category == 'documentos')
+        && data.size is string && data.size.size() <= 20
+        && data.uploadDate is string && data.uploadDate.size() <= 30
+        && (!data.keys().hasAny(['content']) || (data.content is string && data.content.size() <= 100000))
+        && (!data.keys().hasAny(['author']) || (data.author is string && data.author.size() <= 100));
+    }
+
+    // --- Path Specific Match Blocks ---
+
+    // 1. Agenda Items Collection
+    match /agenda/{itemId} {
+      allow read, write: if isSignedIn() && isValidId(itemId);
+      allow create: if isSignedIn() && isValidId(itemId) && isValidAgendaItem(incoming());
+      allow update: if isSignedIn() && isValidId(itemId) && isValidAgendaItem(incoming());
+    }
+
+    // 2. Recados Collection
+    match /recados/{itemId} {
+      allow read, write: if isSignedIn() && isValidId(itemId);
+      allow create: if isSignedIn() && isValidId(itemId) && isValidRecadoItem(incoming());
+      allow update: if isSignedIn() && isValidId(itemId) && isValidRecadoItem(incoming());
+    }
+
+    // 3. Memorias Collection
+    match /memorias/{itemId} {
+      allow read, write: if isSignedIn() && isValidId(itemId);
+      allow create: if isSignedIn() && isValidId(itemId) && isValidMemoriaItem(incoming());
+      allow update: if isSignedIn() && isValidId(itemId) && isValidMemoriaItem(incoming());
+    }
+
+    // 4. Cartinhas Collection
+    match /cartinhas/{itemId} {
+      allow read, write: if isSignedIn() && isValidId(itemId);
+      allow create: if isSignedIn() && isValidId(itemId) && isValidCartinhaItem(incoming());
+      allow update: if isSignedIn() && isValidId(itemId) && isValidCartinhaItem(incoming());
+    }
+
+    // 5. Conversas Collections
+    match /conversas/{roomId} {
+      allow read, write: if isSignedIn() && isValidId(roomId);
+      allow create: if isSignedIn() && isValidId(roomId) && isValidConversaRoom(incoming());
+      allow update: if isSignedIn() && isValidId(roomId) && isValidConversaRoom(incoming());
+
+      // Chat Messages Subcollection
+      match /messages/{messageId} {
+        allow read, write: if isSignedIn() && isValidId(messageId);
+        allow create: if isSignedIn() && isValidId(messageId) && isValidChatMessage(incoming());
+        allow update: if isSignedIn() && isValidId(messageId) && isValidChatMessage(incoming());
+      }
+    }
+
+    // 6. Conteudos Collection
+    match /conteudos/{itemId} {
+      allow read, write: if isSignedIn() && isValidId(itemId);
+      allow create: if isSignedIn() && isValidId(itemId) && isValidConteudoFile(incoming());
+      allow update: if isSignedIn() && isValidId(itemId) && isValidConteudoFile(incoming());
+    }
+  }
+}

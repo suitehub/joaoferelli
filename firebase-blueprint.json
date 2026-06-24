@@ -1,0 +1,139 @@
+{
+  "entities": {
+    "AgendaItem": {
+      "title": "AgendaItem",
+      "description": "An item in the calendar agenda",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "date": { "type": "string", "format": "date" },
+        "time": { "type": "string" },
+        "status": { "type": "string", "enum": ["todo", "doing", "done"] },
+        "priority": { "type": "string", "enum": ["low", "medium", "high"] },
+        "description": { "type": "string" }
+      },
+      "required": ["id", "title", "date", "status", "priority"]
+    },
+    "RecadoItem": {
+      "title": "RecadoItem",
+      "description": "Sticky note or message on the board",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "text": { "type": "string" },
+        "color": { "type": "string", "enum": ["yellow", "blue", "green", "pink", "purple", "orange", "slate"] },
+        "priority": { "type": "string", "enum": ["low", "medium", "high"] },
+        "isPinned": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "title", "text", "color", "priority", "isPinned", "createdAt"]
+    },
+    "MemoriaItem": {
+      "title": "MemoriaItem",
+      "description": "Shared visual memory card",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "imageUrl": { "type": "string" },
+        "caption": { "type": "string" },
+        "date": { "type": "string", "format": "date" },
+        "expiration": { "type": "string", "enum": ["permanent", "24h", "7d"] },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "isShared": { "type": "boolean" }
+      },
+      "required": ["id", "imageUrl", "caption", "date", "expiration", "createdAt", "isShared"]
+    },
+    "CartinhaItem": {
+      "title": "CartinhaItem",
+      "description": "Letters delivered with a stamp and wax seal",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "content": { "type": "string" },
+        "sender": { "type": "string" },
+        "recipient": { "type": "string" },
+        "date": { "type": "string", "format": "date" },
+        "deliverAt": { "type": "string", "format": "date" },
+        "stampType": { "type": "string", "enum": ["floral", "crown", "anchor", "heart", "retro"] },
+        "sealColor": { "type": "string", "enum": ["burgundy", "gold", "navy", "emerald", "bronze"] },
+        "isOpened": { "type": "boolean" }
+      },
+      "required": ["id", "title", "content", "sender", "recipient", "date", "deliverAt", "stampType", "sealColor", "isOpened"]
+    },
+    "ChatMessage": {
+      "title": "ChatMessage",
+      "description": "A single chat message in a chat room",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "sender": { "type": "string", "enum": ["owner", "guest"] },
+        "senderName": { "type": "string" },
+        "text": { "type": "string" },
+        "timestamp": { "type": "string" }
+      },
+      "required": ["id", "sender", "senderName", "text", "timestamp"]
+    },
+    "ConversaRoom": {
+      "title": "ConversaRoom",
+      "description": "A chat room or conversation thread",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "avatarColor": { "type": "string" },
+        "description": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "personaPrompt": { "type": "string" }
+      },
+      "required": ["id", "name", "avatarColor", "description", "createdAt"]
+    },
+    "ConteudoFile": {
+      "title": "ConteudoFile",
+      "description": "Sermons or study material files",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "category": { "type": "string", "enum": ["sermoes", "estudos", "aulas", "pdfs", "downloads", "documentos"] },
+        "size": { "type": "string" },
+        "uploadDate": { "type": "string", "format": "date" },
+        "content": { "type": "string" },
+        "author": { "type": "string" }
+      },
+      "required": ["id", "name", "category", "size", "uploadDate"]
+    }
+  },
+  "firestore": {
+    "/agenda/{itemId}": {
+      "schema": "AgendaItem",
+      "description": "Agenda events collection"
+    },
+    "/recados/{itemId}": {
+      "schema": "RecadoItem",
+      "description": "Sticky notes on the public/private board"
+    },
+    "/memorias/{itemId}": {
+      "schema": "MemoriaItem",
+      "description": "Photos and memories"
+    },
+    "/cartinhas/{itemId}": {
+      "schema": "CartinhaItem",
+      "description": "Letters with virtual stamps"
+    },
+    "/conversas/{roomId}": {
+      "schema": "ConversaRoom",
+      "description": "Active chat rooms"
+    },
+    "/conversas/{roomId}/messages/{messageId}": {
+      "schema": "ChatMessage",
+      "description": "Chat history inside each room"
+    },
+    "/conteudos/{itemId}": {
+      "schema": "ConteudoFile",
+      "description": "Sermons and studying files"
+    }
+  }
+}

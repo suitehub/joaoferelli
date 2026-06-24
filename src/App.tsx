@@ -5,6 +5,8 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
+import { signInAnonymously } from 'firebase/auth';
+import { collection, onSnapshot, query, orderBy } from 'firebase/firestore';
 
 import { Header } from './components/Header';
 import { Dashboard } from './components/Dashboard';
@@ -15,14 +17,7 @@ import { CartinhasPanel } from './components/CartinhasPanel';
 import { ConversasPanel } from './components/ConversasPanel';
 import { ConteudosPanel } from './components/ConteudosPanel';
 
-import { 
-  initialAgenda, 
-  initialRecados, 
-  initialMemorias, 
-  initialCartinhas, 
-  initialConversas, 
-  initialConteudos 
-} from './data/initialData';
+import { auth, db, handleFirestoreError, OperationType } from './firebase';
 
 import { 
   AgendaItem, 
@@ -30,14 +25,37 @@ import {
   MemoriaItem, 
   CartinhaItem, 
   ConversaRoom, 
-  ConteudoFile 
+  ConteudoFile,
+  ChatMessage
 } from './types';
+
+import {
+  testConnection,
+  seedDatabaseIfEmpty,
+  addAgendaItemDb,
+  updateAgendaItemDb,
+  deleteAgendaItemDb,
+  addRecadoItemDb,
+  updateRecadoItemDb,
+  deleteRecadoItemDb,
+  addMemoriaItemDb,
+  updateMemoriaItemDb,
+  deleteMemoriaItemDb,
+  addCartinhaItemDb,
+  updateCartinhaItemDb,
+  deleteCartinhaItemDb,
+  addConversaRoomDb,
+  addChatMessageDb,
+  addConteudoFileDb,
+  deleteConteudoFileDb
+} from './utils/firebaseSync';
 
 export default function App() {
   // Global States
   const [currentTab, setCurrentTab] = useState<'meu-mundo' | 'compartilhado'>('meu-mundo');
   const [activePanelId, setActivePanelId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [authReady, setAuthReady] = useState(false);
 
   // Splash Screen automatic entrance timer
   useEffect(() => {
@@ -47,35 +65,35 @@ export default function App() {
     return () => clearTimeout(timer);
   }, []);
 
-  // Panel State Collections (with localStorage persistence fallback)
+  // Panel State Collections (backed by Firestore with LocalStorage cache fallback)
   const [agenda, setAgenda] = useState<AgendaItem[]>(() => {
     const saved = localStorage.getItem('joao_agenda');
-    return saved ? JSON.parse(saved) : initialAgenda;
+    return saved ? JSON.parse(saved) : [];
   });
 
   const [recados, setRecados] = useState<RecadoItem[]>(() => {
     const saved = localStorage.getItem('joao_recados');
-    return saved ? JSON.parse(saved) : initialRecados;
+    return saved ? JSON.parse(saved) : [];
   });
 
   const [memorias, setMemorias] = useState<MemoriaItem[]>(() => {
     const saved = localStorage.getItem('joao_memorias');
-    return saved ? JSON.parse(saved) : initialMemorias;
+    return saved ? JSON.parse(saved) : [];
   });
 
   const [cartinhas, setCartinhas] = useState<CartinhaItem[]>(() => {
     const saved = localStorage.getItem('joao_cartinhas');
-    return saved ? JSON.parse(saved) : initialCartinhas;
+    return saved ? JSON.parse(saved) : [];
   });
 
   const [conversas, setConversas] = useState<ConversaRoom[]>(() => {
     const saved = localStorage.getItem('joao_conversas');
-    return saved ? JSON.parse(saved) : initialConversas;
+    return saved ? JSON.parse(saved) : [];
   });
 
   const [conteudos, setConteudos] = useState<ConteudoFile[]>(() => {
     const saved = localStorage.getItem('joao_conteudos');
-    return saved ? JSON.parse(saved) : initialConteudos;
+    return saved ? JSON.parse(saved) : [];
   });
 
   // Chat Room-specific state
@@ -87,30 +105,152 @@ export default function App() {
 
   const ignoreHashChange = useRef(false);
 
-  // LocalStorage Auto-Syncing
+  // 1. Firebase Authentication & DB Seeder
   useEffect(() => {
-    localStorage.setItem('joao_agenda', JSON.stringify(agenda));
-  }, [agenda]);
+    const initFirebase = async () => {
+      try {
+        // Sign-in anonymously so every visitor has a valid uid for Zero-Trust rules
+        await signInAnonymously(auth);
+        setAuthReady(true);
+        
+        // Execute system-mandated connection check & seed empty DB collections
+        await testConnection();
+        await seedDatabaseIfEmpty();
+      } catch (err) {
+        console.error('Firebase Auth/Seed Error:', err);
+      }
+    };
+    initFirebase();
+  }, []);
 
+  // 2. Real-Time Snapshot Synchronization Listeners
   useEffect(() => {
-    localStorage.setItem('joao_recados', JSON.stringify(recados));
-  }, [recados]);
+    if (!authReady) return;
 
-  useEffect(() => {
-    localStorage.setItem('joao_memorias', JSON.stringify(memorias));
-  }, [memorias]);
+    const unsubAgenda = onSnapshot(collection(db, 'agenda'), (snap) => {
+      const items: AgendaItem[] = [];
+      snap.forEach(doc => {
+        items.push(doc.data() as AgendaItem);
+      });
+      setAgenda(items);
+      localStorage.setItem('joao_agenda', JSON.stringify(items));
+    }, (err) => {
+      handleFirestoreError(err, OperationType.LIST, 'agenda');
+    });
 
-  useEffect(() => {
-    localStorage.setItem('joao_cartinhas', JSON.stringify(cartinhas));
-  }, [cartinhas]);
+    const unsubRecados = onSnapshot(collection(db, 'recados'), (snap) => {
+      const items: RecadoItem[] = [];
+      snap.forEach(doc => {
+        items.push(doc.data() as RecadoItem);
+      });
+      setRecados(items);
+      localStorage.setItem('joao_recados', JSON.stringify(items));
+    }, (err) => {
+      handleFirestoreError(err, OperationType.LIST, 'recados');
+    });
 
-  useEffect(() => {
-    localStorage.setItem('joao_conversas', JSON.stringify(conversas));
-  }, [conversas]);
+    const unsubMemorias = onSnapshot(collection(db, 'memorias'), (snap) => {
+      const items: MemoriaItem[] = [];
+      snap.forEach(doc => {
+        items.push(doc.data() as MemoriaItem);
+      });
+      setMemorias(items);
+      localStorage.setItem('joao_memorias', JSON.stringify(items));
+    }, (err) => {
+      handleFirestoreError(err, OperationType.LIST, 'memorias');
+    });
 
+    const unsubCartinhas = onSnapshot(collection(db, 'cartinhas'), (snap) => {
+      const items: CartinhaItem[] = [];
+      snap.forEach(doc => {
+        items.push(doc.data() as CartinhaItem);
+      });
+      setCartinhas(items);
+      localStorage.setItem('joao_cartinhas', JSON.stringify(items));
+    }, (err) => {
+      handleFirestoreError(err, OperationType.LIST, 'cartinhas');
+    });
+
+    const unsubConteudos = onSnapshot(collection(db, 'conteudos'), (snap) => {
+      const items: ConteudoFile[] = [];
+      snap.forEach(doc => {
+        items.push(doc.data() as ConteudoFile);
+      });
+      setConteudos(items);
+      localStorage.setItem('joao_conteudos', JSON.stringify(items));
+    }, (err) => {
+      handleFirestoreError(err, OperationType.LIST, 'conteudos');
+    });
+
+    const unsubConversas = onSnapshot(collection(db, 'conversas'), (snap) => {
+      const items: ConversaRoom[] = [];
+      snap.forEach(doc => {
+        const roomData = doc.data();
+        items.push({
+          id: doc.id,
+          name: roomData.name || '',
+          avatarColor: roomData.avatarColor || '',
+          description: roomData.description || '',
+          createdAt: roomData.createdAt || '',
+          personaPrompt: roomData.personaPrompt,
+          messages: [] // Loaded separately via activeRoom messages subcollection listener
+        } as ConversaRoom);
+      });
+      setConversas(prev => {
+        const merged = items.map(room => {
+          const oldRoom = prev.find(r => r.id === room.id);
+          return {
+            ...room,
+            messages: oldRoom ? oldRoom.messages : []
+          };
+        });
+        localStorage.setItem('joao_conversas', JSON.stringify(merged));
+        return merged;
+      });
+    }, (err) => {
+      handleFirestoreError(err, OperationType.LIST, 'conversas');
+    });
+
+    return () => {
+      unsubAgenda();
+      unsubRecados();
+      unsubMemorias();
+      unsubCartinhas();
+      unsubConteudos();
+      unsubConversas();
+    };
+  }, [authReady]);
+
+  // Real-Time Subcollection Messages Listener for Active Chat Room
   useEffect(() => {
-    localStorage.setItem('joao_conteudos', JSON.stringify(conteudos));
-  }, [conteudos]);
+    if (!authReady || !activeRoomId) return;
+
+    const messagesQuery = query(
+      collection(db, 'conversas', activeRoomId, 'messages'),
+      orderBy('timestamp', 'asc')
+    );
+
+    const unsubMessages = onSnapshot(messagesQuery, (snap) => {
+      const msgs: ChatMessage[] = [];
+      snap.forEach(doc => {
+        msgs.push(doc.data() as ChatMessage);
+      });
+      setConversas(prev => {
+        const updated = prev.map(room => {
+          if (room.id === activeRoomId) {
+            return { ...room, messages: msgs };
+          }
+          return room;
+        });
+        localStorage.setItem('joao_conversas', JSON.stringify(updated));
+        return updated;
+      });
+    }, (err) => {
+      handleFirestoreError(err, OperationType.LIST, `conversas/${activeRoomId}/messages`);
+    });
+
+    return () => unsubMessages();
+  }, [authReady, activeRoomId]);
 
   useEffect(() => {
     if (guestName) {
@@ -173,31 +313,31 @@ export default function App() {
     }
   };
 
-  // State Updaters / Actions
-  
+  // State Updaters / Actions synchronized to Firestore DB
+
   // 1. Agenda actions
   const handleAddTask = (task: Omit<AgendaItem, 'id'>) => {
     const newTask: AgendaItem = {
       ...task,
       id: `task-${Date.now()}`
     };
-    setAgenda(prev => [newTask, ...prev]);
+    addAgendaItemDb(newTask);
   };
 
   const handleToggleTask = (id: string) => {
-    setAgenda(prev => prev.map(task => 
-      task.id === id ? { ...task, status: task.status === 'done' ? 'todo' : 'done' } : task
-    ));
+    const task = agenda.find(t => t.id === id);
+    if (task) {
+      const newStatus: AgendaItem['status'] = task.status === 'done' ? 'todo' : 'done';
+      updateAgendaItemDb(id, { status: newStatus });
+    }
   };
 
   const handleUpdateTaskStatus = (id: string, status: AgendaItem['status']) => {
-    setAgenda(prev => prev.map(task => 
-      task.id === id ? { ...task, status } : task
-    ));
+    updateAgendaItemDb(id, { status });
   };
 
   const handleDeleteTask = (id: string) => {
-    setAgenda(prev => prev.filter(task => task.id !== id));
+    deleteAgendaItemDb(id);
   };
 
   // 2. Recados actions
@@ -205,40 +345,43 @@ export default function App() {
     const newRecado: RecadoItem = {
       ...recado,
       id: `note-${Date.now()}`,
-      createdAt: new Date().toLocaleDateString('pt-BR'),
+      createdAt: new Date().toISOString(),
       isPinned: false
     };
-    setRecados(prev => [newRecado, ...prev]);
+    addRecadoItemDb(newRecado);
   };
 
   const handlePinRecado = (id: string) => {
-    setRecados(prev => prev.map(note => 
-      note.id === id ? { ...note, isPinned: !note.isPinned } : note
-    ));
+    const note = recados.find(r => r.id === id);
+    if (note) {
+      updateRecadoItemDb(id, { isPinned: !note.isPinned });
+    }
   };
 
   const handleDeleteRecado = (id: string) => {
-    setRecados(prev => prev.filter(note => note.id !== id));
+    deleteRecadoItemDb(id);
   };
 
   // 3. Memorias actions
-  const handleAddMemoria = (memoria: Omit<MemoriaItem, 'id' | 'date'>) => {
+  const handleAddMemoria = (memoria: Omit<MemoriaItem, 'id' | 'date' | 'createdAt'>) => {
     const newMemoria: MemoriaItem = {
       ...memoria,
       id: `mem-${Date.now()}`,
       date: new Date().toLocaleDateString('pt-BR'),
+      createdAt: new Date().toISOString()
     };
-    setMemorias(prev => [newMemoria, ...prev]);
+    addMemoriaItemDb(newMemoria);
   };
 
   const handleToggleMemoriaSharing = (id: string) => {
-    setMemorias(prev => prev.map(mem => 
-      mem.id === id ? { ...mem, isShared: !mem.isShared } : mem
-    ));
+    const mem = memorias.find(m => m.id === id);
+    if (mem) {
+      updateMemoriaItemDb(id, { isShared: !mem.isShared });
+    }
   };
 
   const handleDeleteMemoria = (id: string) => {
-    setMemorias(prev => prev.filter(mem => mem.id !== id));
+    deleteMemoriaItemDb(id);
   };
 
   // 4. Cartinhas actions
@@ -248,48 +391,36 @@ export default function App() {
       id: `letter-${Date.now()}`,
       isOpened: false
     };
-    setCartinhas(prev => [newCartinha, ...prev]);
+    addCartinhaItemDb(newCartinha);
   };
 
   const handleOpenCartinha = (id: string) => {
-    setCartinhas(prev => prev.map(letter => 
-      letter.id === id ? { ...letter, isOpened: true } : letter
-    ));
+    updateCartinhaItemDb(id, { isOpened: true });
   };
 
   const handleDeleteCartinha = (id: string) => {
-    setCartinhas(prev => prev.filter(letter => letter.id !== id));
+    deleteCartinhaItemDb(id);
   };
 
   // 5. Conversas actions
   const handleAddRoom = (room: Omit<ConversaRoom, 'messages' | 'createdAt'>) => {
-    const newRoom: ConversaRoom = {
+    const newRoom: Omit<ConversaRoom, 'messages'> = {
       ...room,
-      messages: [],
       createdAt: new Date().toLocaleDateString('pt-BR')
     };
-    setConversas(prev => [...prev, newRoom]);
+    addConversaRoomDb(newRoom);
     setActiveRoomId(room.id);
   };
 
   const handleSendMessage = (roomId: string, text: string, sender: 'owner' | 'guest', senderName: string) => {
-    const newMessage = {
+    const newMessage: ChatMessage = {
       id: `msg-${Date.now()}`,
       sender,
       senderName,
       text,
       timestamp: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
     };
-
-    setConversas(prev => prev.map(room => {
-      if (room.id === roomId) {
-        return {
-          ...room,
-          messages: [...room.messages, newMessage]
-        };
-      }
-      return room;
-    }));
+    addChatMessageDb(roomId, newMessage);
   };
 
   // 6. Conteudos actions
@@ -299,12 +430,13 @@ export default function App() {
       id: `file-${Date.now()}`,
       uploadDate: new Date().toLocaleDateString('pt-BR')
     };
-    setConteudos(prev => [newFile, ...prev]);
+    addConteudoFileDb(newFile);
   };
 
   const handleDeleteFile = (id: string) => {
-    setConteudos(prev => prev.filter(file => file.id !== id));
+    deleteConteudoFileDb(id);
   };
+
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col font-sans select-none antialiased">
