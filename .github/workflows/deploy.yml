@@ -43,6 +43,12 @@ jobs:
       - name: Run Type Checks & Linter
         run: npm run lint
 
+      - name: Ensure Logo is in Public and Dist
+        run: |
+          mkdir -p public dist
+          cp logojoao.png public/logojoao.png 2>/dev/null || true
+          cp logojoao.png dist/logojoao.png 2>/dev/null || true
+
       - name: Build Project
         run: npm run build
 

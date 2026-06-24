@@ -3,8 +3,9 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
+
 import { Header } from './components/Header';
 import { Dashboard } from './components/Dashboard';
 import { AgendaPanel } from './components/AgendaPanel';
@@ -84,6 +85,8 @@ export default function App() {
     return localStorage.getItem('joao_guest_name') || '';
   });
 
+  const ignoreHashChange = useRef(false);
+
   // LocalStorage Auto-Syncing
   useEffect(() => {
     localStorage.setItem('joao_agenda', JSON.stringify(agenda));
@@ -118,6 +121,10 @@ export default function App() {
   // Client-side Hash Router for direct link-based shared chats e.g. #/chat/familia
   useEffect(() => {
     const handleHashRoute = () => {
+      if (ignoreHashChange.current) {
+        ignoreHashChange.current = false;
+        return;
+      }
       const hash = window.location.hash;
       if (hash.startsWith('#/chat/')) {
         const roomId = hash.replace('#/chat/', '');
@@ -146,6 +153,7 @@ export default function App() {
 
   // Navigate panel
   const handleSelectPanel = (panelId: string | null) => {
+    ignoreHashChange.current = true;
     setActivePanelId(panelId);
     // Sync hash URL
     if (panelId === 'conversas' && activeRoomId) {
@@ -156,6 +164,7 @@ export default function App() {
   };
 
   const handleSelectRoom = (roomId: string | null) => {
+    ignoreHashChange.current = true;
     setActiveRoomId(roomId);
     if (roomId) {
       window.location.hash = `#/chat/${roomId}`;

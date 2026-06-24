@@ -44,6 +44,7 @@ export const ConversasPanel: React.FC<ConversasPanelProps> = ({
 }) => {
   const [copied, setCopied] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
+  const [tempGuestName, setTempGuestName] = useState('');
   
   // Room Form
   const [roomName, setRoomName] = useState('');
@@ -58,6 +59,7 @@ export const ConversasPanel: React.FC<ConversasPanelProps> = ({
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const activeRoom = rooms.find(r => r.id === activeRoomId);
+  const isRoomActive = !!(activeRoomId && activeRoom);
 
   // Auto-scroll to bottom of chats
   useEffect(() => {
@@ -126,7 +128,7 @@ export const ConversasPanel: React.FC<ConversasPanelProps> = ({
         // Mimic natural typing delay
         setTimeout(() => {
           setIsTypingSimulated(false);
-          const replySenderName = activeRoomId === 'familia' ? 'Mãe' : activeRoomId === 'estudos' ? 'Mateus' : activeRoom?.name.replace(/[^a-zA-ZÀ-ÿ\s]/g, '').trim() || 'Companion';
+          const replySenderName = activeRoomId === 'familia' ? 'Mãe' : activeRoomId === 'estudos' ? 'Mateus' : (activeRoom?.name || '').replace(/[^a-zA-ZÀ-ÿ\s]/g, '').trim() || 'Companion';
           onSendMessage(roomId, data.reply, 'guest', replySenderName);
         }, 1200);
         return;
@@ -209,8 +211,6 @@ export const ConversasPanel: React.FC<ConversasPanelProps> = ({
 
   // Guest name prompt screen
   if (isGuestMode && !guestName) {
-    const [tempGuestName, setTempGuestName] = useState('');
-    
     const handleSetGuestNameSubmit = (e: React.FormEvent) => {
       e.preventDefault();
       if (!tempGuestName.trim()) return;
@@ -253,7 +253,7 @@ export const ConversasPanel: React.FC<ConversasPanelProps> = ({
         
         {/* ROOMS SIDE LIST (Hidden on mobile if a room is active) */}
         <div className={`md:col-span-1 border-r border-slate-100 flex flex-col h-full bg-slate-50/50 ${
-          activeRoomId ? 'hidden md:flex' : 'flex'
+          isRoomActive ? 'hidden md:flex' : 'flex'
         }`}>
           <div className="p-4 border-b border-slate-100 bg-white flex justify-between items-center shrink-0">
             <div>
@@ -306,7 +306,7 @@ export const ConversasPanel: React.FC<ConversasPanelProps> = ({
         </div>
 
         {/* ACTIVE CHAT SCREEN */}
-        {activeRoomId && activeRoom ? (
+        {isRoomActive && activeRoom ? (
           <div className="md:col-span-2 flex flex-col h-full bg-[#fdfdfc]">
             
             {/* Active chat header */}
@@ -389,7 +389,7 @@ export const ConversasPanel: React.FC<ConversasPanelProps> = ({
               {isTypingSimulated && (
                 <div className="mr-auto bg-white border border-slate-100 text-slate-800 rounded-2xl rounded-bl-none px-4 py-2.5 shadow-3xs max-w-[75%]">
                   <span className="font-semibold text-[9px] text-rose-500 block mb-1">
-                    {activeRoomId === 'familia' ? 'Mãe' : activeRoomId === 'estudos' ? 'Mateus' : activeRoom.name.replace(/[^a-zA-ZÀ-ÿ\s]/g, '').trim()} está digitando...
+                    {activeRoomId === 'familia' ? 'Mãe' : activeRoomId === 'estudos' ? 'Mateus' : (activeRoom?.name || '').replace(/[^a-zA-ZÀ-ÿ\s]/g, '').trim()} está digitando...
                   </span>
                   <div className="flex gap-1 items-center h-2">
                     <span className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></span>
