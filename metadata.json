@@ -1,0 +1,6 @@
+{
+  "name": "Cabeça do João",
+  "description": "Segundo cérebro digital para centralizar a organização por contexto em painéis integrados: Agenda, Recados, Memórias, Cartinhas e Conversas.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
