@@ -27,6 +27,7 @@ interface ConteudosPanelProps {
   files: ConteudoFile[];
   onAddFile: (file: Omit<ConteudoFile, 'id' | 'uploadDate'>) => void;
   onDeleteFile: (id: string) => void;
+  isReadOnly?: boolean;
 }
 
 const CATEGORIES = [
@@ -43,6 +44,7 @@ export const ConteudosPanel: React.FC<ConteudosPanelProps> = ({
   files,
   onAddFile,
   onDeleteFile,
+  isReadOnly = false,
 }) => {
   const [activeCategory, setActiveCategory] = useState<string>('all');
   const [search, setSearch] = useState('');
@@ -168,13 +170,15 @@ export const ConteudosPanel: React.FC<ConteudosPanelProps> = ({
             />
           </div>
 
-          <button
-            onClick={() => setIsAdding(true)}
-            className="flex items-center justify-center gap-1.5 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-semibold shadow-xs transition-colors cursor-pointer shrink-0"
-          >
-            <Plus className="w-4 h-4" />
-            <span>Adicionar Arquivo</span>
-          </button>
+          {!isReadOnly && (
+            <button
+              onClick={() => setIsAdding(true)}
+              className="flex items-center justify-center gap-1.5 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-semibold shadow-xs transition-colors cursor-pointer shrink-0"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Adicionar Arquivo</span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -255,19 +259,24 @@ export const ConteudosPanel: React.FC<ConteudosPanelProps> = ({
                           <div className="p-2 bg-indigo-50 text-indigo-600 rounded-xl">
                             <FileText className="w-5 h-5" />
                           </div>
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              onDeleteFile(file.id);
-                            }}
-                            className="opacity-0 group-hover:opacity-100 p-1 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all cursor-pointer"
-                            title="Deletar arquivo"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
+                          {!isReadOnly && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onDeleteFile(file.id);
+                              }}
+                              className="opacity-0 group-hover:opacity-100 p-1 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all cursor-pointer"
+                              title="Deletar arquivo"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          )}
                         </div>
                         
                         <h4 className="font-display font-bold text-xs text-slate-800 mt-3 truncate group-hover:text-indigo-600">
+                          {file.createdByName && (
+                            <span className="text-rose-600 font-bold mr-1">[{file.createdByName}]</span>
+                          )}
                           {file.name}
                         </h4>
                         <p className="text-[10px] text-slate-400 mt-1 uppercase font-mono font-medium tracking-wide">
@@ -297,7 +306,12 @@ export const ConteudosPanel: React.FC<ConteudosPanelProps> = ({
                         <FileText className="w-4 h-4" />
                       </div>
                       <div>
-                        <h4 className="font-display font-bold text-xs text-slate-800 group-hover:text-indigo-600">{file.name}</h4>
+                        <h4 className="font-display font-bold text-xs text-slate-800 group-hover:text-indigo-600">
+                          {file.createdByName && (
+                            <span className="text-rose-600 font-bold mr-1">[{file.createdByName}]</span>
+                          )}
+                          {file.name}
+                        </h4>
                         <p className="text-[9px] text-slate-400 uppercase font-mono tracking-wider">
                           {CATEGORIES.find(c => c.id === file.category)?.label || file.category} • {file.author}
                         </p>
@@ -307,15 +321,17 @@ export const ConteudosPanel: React.FC<ConteudosPanelProps> = ({
                     <div className="flex items-center gap-4 shrink-0 font-mono text-[10px] text-slate-400">
                       <span>{file.size}</span>
                       <span>{file.uploadDate}</span>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onDeleteFile(file.id);
-                        }}
-                        className="opacity-0 group-hover:opacity-100 p-1 text-slate-400 hover:text-rose-600 rounded-md transition-all cursor-pointer"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
+                      {!isReadOnly && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onDeleteFile(file.id);
+                          }}
+                          className="opacity-0 group-hover:opacity-100 p-1 text-slate-400 hover:text-rose-600 rounded-md transition-all cursor-pointer"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      )}
                     </div>
                   </div>
                 ))}

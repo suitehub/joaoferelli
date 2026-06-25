@@ -18,6 +18,7 @@ interface TimezonePanelProps {
   onAddAlarm: (alarm: Omit<TimezoneAlarm, 'id' | 'createdAt'>) => void;
   onDeleteAlarm: (id: string) => void;
   isGuestMode?: boolean;
+  isReadOnly?: boolean;
 }
 
 export const TimezonePanel: React.FC<TimezonePanelProps> = ({
@@ -25,6 +26,7 @@ export const TimezonePanel: React.FC<TimezonePanelProps> = ({
   onAddAlarm,
   onDeleteAlarm,
   isGuestMode = false,
+  isReadOnly = false,
 }) => {
   const [timeBR, setTimeBR] = useState('');
   const [dateBR, setDateBR] = useState('');
@@ -287,7 +289,7 @@ export const TimezonePanel: React.FC<TimezonePanelProps> = ({
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
         
         {/* FORM TO ADD TIME WARNING */}
-        {!isGuestMode && (
+        {!isGuestMode && !isReadOnly && (
           <div className="lg:col-span-5 bg-white border border-slate-100 rounded-3xl p-6 shadow-xs h-fit">
             <h3 className="font-display font-bold text-lg text-slate-800 mb-4 flex items-center gap-2">
               <Bell className="w-5 h-5 text-indigo-500" />
@@ -365,7 +367,7 @@ export const TimezonePanel: React.FC<TimezonePanelProps> = ({
         )}
 
         {/* LIST OF TIME WARNINGS */}
-        <div className={`${isGuestMode ? 'lg:col-span-12' : 'lg:col-span-7'} bg-white border border-slate-100 rounded-3xl p-6 shadow-xs`}>
+        <div className={`${(isGuestMode || isReadOnly) ? 'lg:col-span-12' : 'lg:col-span-7'} bg-white border border-slate-100 rounded-3xl p-6 shadow-xs`}>
           <div className="flex justify-between items-center mb-4">
             <h3 className="font-display font-bold text-lg text-slate-800 flex items-center gap-2">
               <Bell className="w-5 h-5 text-rose-500" />
@@ -392,6 +394,9 @@ export const TimezonePanel: React.FC<TimezonePanelProps> = ({
                 >
                   <div className="min-w-0 flex-1">
                     <h4 className="font-semibold text-sm text-slate-800 leading-tight truncate">
+                      {alarm.createdByName && (
+                        <span className="text-rose-600 font-bold mr-1">[{alarm.createdByName}]</span>
+                      )}
                       {alarm.title}
                     </h4>
                     
@@ -408,7 +413,7 @@ export const TimezonePanel: React.FC<TimezonePanelProps> = ({
                     </div>
                   </div>
 
-                  {!isGuestMode && (
+                  {!isGuestMode && !isReadOnly && (
                     <button
                       onClick={() => onDeleteAlarm(alarm.id)}
                       className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-xl cursor-pointer transition-colors"

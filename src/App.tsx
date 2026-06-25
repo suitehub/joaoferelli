@@ -17,6 +17,8 @@ import { CartinhasPanel } from './components/CartinhasPanel';
 import { ConversasPanel } from './components/ConversasPanel';
 import { ConteudosPanel } from './components/ConteudosPanel';
 import { TimezonePanel } from './components/TimezonePanel';
+import { Entrance } from './components/Entrance';
+import { ProfilePanel } from './components/ProfilePanel';
 
 import { auth, db, handleFirestoreError, OperationType } from './firebase';
 
@@ -29,7 +31,9 @@ import {
   ConteudoFile,
   ChatMessage,
   TimezoneAlarm,
-  JoaoStatus
+  JoaoStatus,
+  Profile,
+  ProfilePermissions
 } from './types';
 
 import {
@@ -54,7 +58,10 @@ import {
   deleteConteudoFileDb,
   updateJoaoStatusDb,
   addTimezoneAlarmDb,
-  deleteTimezoneAlarmDb
+  deleteTimezoneAlarmDb,
+  addProfileDb,
+  updateProfileDb,
+  deleteProfileDb
 } from './utils/firebaseSync';
 
 export default function App() {
@@ -113,6 +120,17 @@ export default function App() {
     return saved ? JSON.parse(saved) : [];
   });
 
+  // User Profile States
+  const [profiles, setProfiles] = useState<Profile[]>(() => {
+    const saved = localStorage.getItem('joao_profiles');
+    return saved ? JSON.parse(saved) : [];
+  });
+
+  const [currentProfile, setCurrentProfile] = useState<Profile | null>(() => {
+    const saved = localStorage.getItem('joao_current_profile');
+    return saved ? JSON.parse(saved) : null;
+  });
+
   // Chat Room-specific state
   const [activeRoomId, setActiveRoomId] = useState<string | null>(null);
   const [isGuestMode, setIsGuestMode] = useState(false);
@@ -148,6 +166,39 @@ export default function App() {
   // 2. Real-Time Snapshot Synchronization Listeners
   useEffect(() => {
     if (!authReady) return;
+
+    const unsubProfiles = onSnapshot(collection(db, 'profiles'), (snap) => {
+      const items: Profile[] = [];
+      snap.forEach(doc => {
+        items.push(doc.data() as Profile);
+      });
+      // Seed default admin if missing
+      const hasAdmin = items.some(p => p.isAdmin);
+      if (!hasAdmin && items.length === 0) {
+        const defaultAdmin: Profile = {
+          id: 'joao-ferelli',
+          name: 'João Ferelli',
+          code: 'adm',
+          isAdmin: true,
+          permissions: {
+            agenda: 'edit',
+            recados: 'edit',
+            memorias: 'edit',
+            cartinhas: 'edit',
+            conversas: 'edit',
+            conteudos: 'edit',
+            timezone: 'edit'
+          },
+          createdAt: new Date().toISOString()
+        };
+        addProfileDb(defaultAdmin);
+        items.push(defaultAdmin);
+      }
+      setProfiles(items);
+      localStorage.setItem('joao_profiles', JSON.stringify(items));
+    }, (err) => {
+      console.error('Error listening to profiles:', err);
+    });
 
     const unsubAgenda = onSnapshot(collection(db, 'agenda'), (snap) => {
       const items: AgendaItem[] = [];
@@ -232,6 +283,7 @@ export default function App() {
     });
 
     return () => {
+      unsubProfiles();
       unsubAgenda();
       unsubRecados();
       unsubMemorias();
@@ -241,6 +293,22 @@ export default function App() {
       unsubAlarms();
     };
   }, [authReady]);
+
+  // 2.1 URL direct link login for created profiles
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const profileIdParam = params.get('profileId');
+    if (profileIdParam && profiles.length > 0) {
+      const matched = profiles.find(p => p.id === profileIdParam);
+      if (matched) {
+        setCurrentProfile(matched);
+        localStorage.setItem('joao_current_profile', JSON.stringify(matched));
+        // Clear query parameters nicely
+        const newUrl = window.location.pathname + window.location.hash;
+        window.history.replaceState({}, '', newUrl);
+      }
+    }
+  }, [profiles]);
 
   // Real-Time Conversas (Rooms) Listener (Enforces guest mode privacy restriction)
   useEffect(() => {
@@ -430,7 +498,8 @@ export default function App() {
   const handleAddTask = (task: Omit<AgendaItem, 'id'>) => {
     const newTask: AgendaItem = {
       ...task,
-      id: `task-${Date.now()}`
+      id: `task-${Date.now()}`,
+      createdByName: currentProfile?.name || 'Anônimo'
     };
     addAgendaItemDb(newTask);
   };
@@ -439,12 +508,18 @@ export default function App() {
     const task = agenda.find(t => t.id === id);
     if (task) {
       const newStatus: AgendaItem['status'] = task.status === 'done' ? 'todo' : 'done';
-      updateAgendaItemDb(id, { status: newStatus });
+      updateAgendaItemDb(id, { 
+        status: newStatus,
+        updatedByName: currentProfile?.name || 'Anônimo'
+      });
     }
   };
 
   const handleUpdateTaskStatus = (id: string, status: AgendaItem['status']) => {
-    updateAgendaItemDb(id, { status });
+    updateAgendaItemDb(id, { 
+      status,
+      updatedByName: currentProfile?.name || 'Anônimo'
+    });
   };
 
   const handleDeleteTask = (id: string) => {
@@ -457,7 +532,8 @@ export default function App() {
       ...recado,
       id: `note-${Date.now()}`,
       createdAt: new Date().toISOString(),
-      isPinned: false
+      isPinned: false,
+      createdByName: currentProfile?.name || 'Anônimo'
     };
     addRecadoItemDb(newRecado);
   };
@@ -479,7 +555,8 @@ export default function App() {
       ...memoria,
       id: `mem-${Date.now()}`,
       date: new Date().toLocaleDateString('pt-BR'),
-      createdAt: new Date().toISOString()
+      createdAt: new Date().toISOString(),
+      createdByName: currentProfile?.name || 'Anônimo'
     };
     addMemoriaItemDb(newMemoria);
   };
@@ -500,7 +577,8 @@ export default function App() {
     const newCartinha: CartinhaItem = {
       ...cartinha,
       id: `letter-${Date.now()}`,
-      isOpened: false
+      isOpened: false,
+      createdByName: currentProfile?.name || 'Anônimo'
     };
     addCartinhaItemDb(newCartinha);
   };
@@ -531,10 +609,13 @@ export default function App() {
   };
 
   const handleSendMessage = (roomId: string, text: string, sender: 'owner' | 'guest', senderName: string) => {
+    const currentName = currentProfile ? currentProfile.name : senderName;
+    const currentSender = currentProfile?.isAdmin ? 'owner' : 'guest';
+
     const newMessage: ChatMessage = {
       id: `msg-${Date.now()}`,
-      sender,
-      senderName,
+      sender: currentSender,
+      senderName: currentName || 'Visitante',
       text,
       timestamp: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
     };
@@ -546,7 +627,8 @@ export default function App() {
     const newFile: ConteudoFile = {
       ...file,
       id: `file-${Date.now()}`,
-      uploadDate: new Date().toLocaleDateString('pt-BR')
+      uploadDate: new Date().toLocaleDateString('pt-BR'),
+      createdByName: currentProfile?.name || 'Anônimo'
     };
     addConteudoFileDb(newFile);
   };
@@ -566,7 +648,8 @@ export default function App() {
     const newAlarm: TimezoneAlarm = {
       ...alarmData,
       id: `alarm-${Date.now()}`,
-      createdAt: new Date().toISOString()
+      createdAt: new Date().toISOString(),
+      createdByName: currentProfile?.name || 'Anônimo'
     };
     setTimezoneAlarms(prev => [newAlarm, ...prev]);
     localStorage.setItem('joao_timezone_alarms', JSON.stringify([newAlarm, ...timezoneAlarms]));
@@ -580,90 +663,111 @@ export default function App() {
     await deleteTimezoneAlarmDb(id);
   };
 
+  // 8. Profiles Administration actions
+  const handleAddProfile = (name: string, permissions: ProfilePermissions) => {
+    const profileId = `profile-${Date.now()}`;
+    const newProfile: Profile = {
+      id: profileId,
+      name,
+      isAdmin: false,
+      permissions,
+      createdAt: new Date().toISOString()
+    };
+    addProfileDb(newProfile);
+
+    // Auto generate chat room for new profile!
+    const roomSlug = `room-${profileId}`;
+    handleAddRoom({
+      id: roomSlug,
+      name: `Conversa com ${name}`,
+      avatarColor: 'bg-emerald-500',
+      description: `Canal de comunicação dedicado com ${name}`
+    });
+  };
+
+  const handleUpdateProfilePermissions = (id: string, permissions: ProfilePermissions) => {
+    updateProfileDb(id, { permissions });
+  };
+
+  const handleDeleteProfile = (id: string) => {
+    deleteProfileDb(id);
+    // Delete associated room
+    const roomSlug = `room-${id}`;
+    handleDeleteRoom(roomSlug);
+  };
+
+  const handleLogout = () => {
+    setCurrentProfile(null);
+    localStorage.removeItem('joao_current_profile');
+    window.location.search = '';
+    window.location.hash = '';
+  };
+
+
+  if (isLoading) {
+    return (
+      <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-slate-950 text-white p-6 overflow-hidden select-none">
+        {/* Background design elements */}
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(30,58,138,0.25)_0%,rgba(2,6,23,1)_80%)] pointer-events-none" />
+        <div className="absolute top-1/4 left-1/4 w-80 h-80 bg-blue-600/10 rounded-full blur-3xl" />
+        <div className="absolute bottom-1/4 right-1/4 w-80 h-80 bg-emerald-600/10 rounded-full blur-3xl" />
+
+        <div className="relative flex flex-col items-center max-w-sm w-full text-center z-10">
+          {/* Glowing outer ring for the big logo */}
+          <div className="relative mb-6">
+            <div className="absolute -inset-2 bg-gradient-to-tr from-blue-600 via-indigo-500 to-emerald-500 rounded-full blur-sm opacity-80 animate-pulse" style={{ animationDuration: '3s' }} />
+            <div className="relative w-32 h-32 rounded-full bg-slate-900 border-4 border-slate-950 shadow-2xl overflow-hidden flex items-center justify-center">
+              <img 
+                src="./logojoao.png" 
+                alt="Cabeça do João" 
+                className="w-full h-full object-cover"
+                onError={(e) => {
+                  e.currentTarget.style.display = 'none';
+                  const parent = e.currentTarget.parentElement;
+                  if (parent) {
+                    const fallback = document.createElement('div');
+                    fallback.className = "w-full h-full rounded-full bg-gradient-to-tr from-blue-600 to-indigo-700 text-white flex items-center justify-center font-display font-black text-4xl";
+                    fallback.innerText = "CJ";
+                    parent.appendChild(fallback);
+                  }
+                }}
+                referrerPolicy="no-referrer"
+              />
+            </div>
+          </div>
+
+          <div>
+            <h2 className="font-display font-black text-3xl tracking-tight bg-gradient-to-r from-white via-slate-100 to-slate-200 bg-clip-text text-transparent mb-1.5 animate-pulse">
+              Cabeça do João
+            </h2>
+            <p className="text-[11px] text-blue-400 font-mono font-bold tracking-widest uppercase mb-6 animate-pulse">
+              Carregando mente e memórias...
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!currentProfile) {
+    return (
+      <Entrance 
+        profiles={profiles}
+        onSelectProfile={(profile) => {
+          setIsLoading(true);
+          setCurrentProfile(profile);
+          localStorage.setItem('joao_current_profile', JSON.stringify(profile));
+          setTimeout(() => {
+            setIsLoading(false);
+          }, 1800);
+        }}
+      />
+    );
+  }
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col font-sans select-none antialiased">
       
-      <AnimatePresence mode="wait">
-        {isLoading && (
-          <motion.div
-            key="splash-screen"
-            initial={{ opacity: 1 }}
-            exit={{ opacity: 0, scale: 1.05 }}
-            transition={{ duration: 0.4, ease: [0.4, 0, 0.2, 1] }}
-            className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-slate-950 text-white p-6 overflow-hidden select-none"
-          >
-            {/* Background design elements */}
-            <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(30,58,138,0.25)_0%,rgba(2,6,23,1)_80%)] pointer-events-none" />
-            <div className="absolute top-1/4 left-1/4 w-80 h-80 bg-blue-600/10 rounded-full blur-3xl" />
-            <div className="absolute bottom-1/4 right-1/4 w-80 h-80 bg-emerald-600/10 rounded-full blur-3xl" />
-
-            <div className="relative flex flex-col items-center max-w-sm w-full text-center z-10">
-              {/* Glowing outer ring for the big logo */}
-              <motion.div
-                initial={{ scale: 0.85, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                transition={{ delay: 0.1, duration: 0.5, type: "spring" }}
-                className="relative mb-6"
-              >
-                <div className="absolute -inset-2 bg-gradient-to-tr from-blue-600 via-indigo-500 to-emerald-500 rounded-full blur-sm opacity-80 animate-pulse" style={{ animationDuration: '3s' }} />
-                <div className="relative w-32 h-32 rounded-full bg-slate-900 border-4 border-slate-950 shadow-2xl overflow-hidden flex items-center justify-center">
-                  <img 
-                    src="./logojoao.png" 
-                    alt="Cabeça do João" 
-                    className="w-full h-full object-cover"
-                    onError={(e) => {
-                      e.currentTarget.style.display = 'none';
-                      const parent = e.currentTarget.parentElement;
-                      if (parent) {
-                        const fallback = document.createElement('div');
-                        fallback.className = "w-full h-full rounded-full bg-gradient-to-tr from-blue-600 to-indigo-700 text-white flex items-center justify-center font-display font-black text-4xl";
-                        fallback.innerText = "CJ";
-                        parent.appendChild(fallback);
-                      }
-                    }}
-                    referrerPolicy="no-referrer"
-                  />
-                </div>
-              </motion.div>
-
-              {/* Dynamic Welcoming Header */}
-              <motion.div
-                initial={{ y: 15, opacity: 0 }}
-                animate={{ y: 0, opacity: 1 }}
-                transition={{ delay: 0.2, duration: 0.4 }}
-              >
-                <h2 className="font-display font-black text-3xl tracking-tight bg-gradient-to-r from-white via-slate-100 to-slate-200 bg-clip-text text-transparent mb-1.5">
-                  Seja Bem-Vindo, João!
-                </h2>
-                <p className="text-[11px] text-blue-400 font-mono font-bold tracking-widest uppercase mb-6">
-                  Segundo Cérebro Digital
-                </p>
-              </motion.div>
-
-              {/* Fancy loading bar */}
-              <div className="w-40 bg-white/10 h-1 rounded-full overflow-hidden mb-3 relative">
-                <motion.div 
-                  initial={{ width: "0%" }}
-                  animate={{ width: "100%" }}
-                  transition={{ duration: 1.5, ease: "easeInOut" }}
-                  className="h-full bg-gradient-to-r from-blue-500 via-indigo-500 to-emerald-400 rounded-full"
-                />
-              </div>
-
-              <motion.p 
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 0.5 }}
-                transition={{ delay: 0.5, duration: 0.3 }}
-                className="text-[10px] text-slate-400 font-sans font-semibold tracking-wide"
-              >
-                Carregando mente e memórias...
-              </motion.p>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
       {/* Header element controls */}
       <Header 
         currentTab={currentTab}
@@ -674,7 +778,9 @@ export default function App() {
           window.location.hash = '';
         }}
         onBack={() => handleSelectPanel(null)}
-        isGuestMode={isGuestMode}
+        isGuestMode={isGuestMode || !currentProfile?.isAdmin}
+        currentProfileName={currentProfile?.name}
+        onLogout={handleLogout}
       />
 
       {/* Main app viewport content */}
@@ -692,7 +798,9 @@ export default function App() {
             timezoneAlarms={timezoneAlarms}
             joaoStatus={joaoStatus}
             onUpdateStatus={handleUpdateStatus}
-            isGuestMode={isGuestMode}
+            isGuestMode={isGuestMode || !currentProfile?.isAdmin}
+            isAdmin={currentProfile?.isAdmin === true}
+            permissions={currentProfile?.permissions}
           />
         ) : (
           <div className="animate-fade-in">
@@ -702,6 +810,7 @@ export default function App() {
                 onAddItem={handleAddTask}
                 onUpdateStatus={handleUpdateTaskStatus}
                 onDeleteItem={handleDeleteTask}
+                isReadOnly={currentProfile?.permissions.agenda === 'view'}
               />
             )}
 
@@ -712,6 +821,7 @@ export default function App() {
                 onPinNote={handlePinRecado}
                 onDeleteNote={handleDeleteRecado}
                 currentTab={currentTab}
+                isReadOnly={currentProfile?.permissions.recados === 'view'}
               />
             )}
 
@@ -722,6 +832,7 @@ export default function App() {
                 onToggleSharing={handleToggleMemoriaSharing}
                 onDeleteMemoria={handleDeleteMemoria}
                 currentTab={currentTab}
+                isReadOnly={currentProfile?.permissions.memorias === 'view'}
               />
             )}
 
@@ -732,6 +843,7 @@ export default function App() {
                 onOpenLetter={handleOpenCartinha}
                 onDeleteLetter={handleDeleteCartinha}
                 currentTab={currentTab}
+                isReadOnly={currentProfile?.permissions.cartinhas === 'view'}
               />
             )}
 
@@ -742,11 +854,12 @@ export default function App() {
                 onSelectRoom={handleSelectRoom}
                 onAddRoom={handleAddRoom}
                 onSendMessage={handleSendMessage}
-                isGuestMode={isGuestMode}
+                isGuestMode={isGuestMode || !currentProfile?.isAdmin}
                 guestName={guestName}
                 onSetGuestName={setGuestName}
                 onDeleteRoom={handleDeleteRoom}
                 joaoStatus={joaoStatus}
+                isReadOnly={currentProfile?.permissions.conversas === 'view'}
               />
             )}
 
@@ -755,6 +868,7 @@ export default function App() {
                 files={conteudos}
                 onAddFile={handleAddFile}
                 onDeleteFile={handleDeleteFile}
+                isReadOnly={currentProfile?.permissions.conteudos === 'view'}
               />
             )}
 
@@ -763,6 +877,16 @@ export default function App() {
                 alarms={timezoneAlarms}
                 onAddAlarm={handleAddTimezoneAlarm}
                 onDeleteAlarm={handleDeleteTimezoneAlarm}
+                isReadOnly={currentProfile?.permissions.timezone === 'view'}
+              />
+            )}
+
+            {activePanelId === 'perfis' && currentProfile?.isAdmin && (
+              <ProfilePanel 
+                profiles={profiles}
+                onAddProfile={handleAddProfile}
+                onUpdateProfilePermissions={handleUpdateProfilePermissions}
+                onDeleteProfile={handleDeleteProfile}
               />
             )}
           </div>

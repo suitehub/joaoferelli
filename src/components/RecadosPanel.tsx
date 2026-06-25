@@ -33,12 +33,22 @@ const COLOR_MAP = {
   slate: { bg: 'bg-slate-100 border-slate-200/50 text-slate-900', border: 'border-slate-300', dot: 'bg-slate-500' },
 };
 
+interface RecadosPanelProps {
+  notes: RecadoItem[];
+  onAddNote: (item: Omit<RecadoItem, 'id' | 'createdAt'>) => void;
+  onPinNote: (id: string) => void;
+  onDeleteNote: (id: string) => void;
+  currentTab?: 'meu-mundo' | 'compartilhado';
+  isReadOnly?: boolean;
+}
+
 export const RecadosPanel: React.FC<RecadosPanelProps> = ({
   notes: items,
   onAddNote: onAddItem,
   onPinNote: onTogglePin,
   onDeleteNote: onDeleteItem,
   currentTab,
+  isReadOnly = false,
 }) => {
   const [search, setSearch] = useState('');
   const [isAdding, setIsAdding] = useState(false);
@@ -116,13 +126,15 @@ export const RecadosPanel: React.FC<RecadosPanelProps> = ({
             />
           </div>
 
-          <button
-            onClick={() => setIsAdding(true)}
-            className="flex items-center justify-center gap-1.5 px-4 py-2.5 bg-amber-500 hover:bg-amber-600 text-white rounded-xl text-xs font-semibold shadow-xs transition-colors cursor-pointer shrink-0"
-          >
-            <Plus className="w-4 h-4" />
-            <span>Novo Lembrete</span>
-          </button>
+          {!isReadOnly && (
+            <button
+              onClick={() => setIsAdding(true)}
+              className="flex items-center justify-center gap-1.5 px-4 py-2.5 bg-amber-500 hover:bg-amber-600 text-white rounded-xl text-xs font-semibold shadow-xs transition-colors cursor-pointer shrink-0"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Novo Lembrete</span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -147,6 +159,9 @@ export const RecadosPanel: React.FC<RecadosPanelProps> = ({
                 <div className="overflow-hidden">
                   <div className="flex items-start justify-between pr-4 mb-2">
                     <h4 className="font-display font-bold text-sm tracking-tight text-slate-900 leading-snug line-clamp-1">
+                      {item.createdByName && (
+                        <span className="text-rose-600 font-bold mr-1">[{item.createdByName}]</span>
+                      )}
                       {item.title}
                     </h4>
                   </div>
@@ -165,26 +180,28 @@ export const RecadosPanel: React.FC<RecadosPanelProps> = ({
                     </span>
                   </div>
 
-                  <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <button
-                      onClick={() => onTogglePin(item.id)}
-                      className={`p-1 rounded-md transition-all cursor-pointer ${
-                        item.isPinned 
-                          ? 'bg-slate-200/50 hover:bg-slate-200 text-slate-700' 
-                          : 'hover:bg-black/5 text-slate-500'
-                      }`}
-                      title={item.isPinned ? "Desafixar recado" : "Fixar no topo"}
-                    >
-                      <Pin className="w-3.5 h-3.5" />
-                    </button>
-                    <button
-                      onClick={() => onDeleteItem(item.id)}
-                      className="p-1 text-slate-500 hover:text-rose-600 hover:bg-rose-50 rounded-md transition-all cursor-pointer"
-                      title="Deletar recado"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
+                  {!isReadOnly && (
+                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <button
+                        onClick={() => onTogglePin(item.id)}
+                        className={`p-1 rounded-md transition-all cursor-pointer ${
+                          item.isPinned 
+                            ? 'bg-slate-200/50 hover:bg-slate-200 text-slate-700' 
+                            : 'hover:bg-black/5 text-slate-500'
+                        }`}
+                        title={item.isPinned ? "Desafixar recado" : "Fixar no topo"}
+                      >
+                        <Pin className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        onClick={() => onDeleteItem(item.id)}
+                        className="p-1 text-slate-500 hover:text-rose-600 hover:bg-rose-50 rounded-md transition-all cursor-pointer"
+                        title="Deletar recado"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
             );

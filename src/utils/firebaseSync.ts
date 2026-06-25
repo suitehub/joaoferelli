@@ -217,6 +217,31 @@ export async function deleteTimezoneAlarmDb(id: string) {
   }
 }
 
+// 9. Profiles CRUD
+export async function addProfileDb(profile: any) {
+  try {
+    await setDoc(doc(db, 'profiles', profile.id), profile);
+  } catch (error) {
+    handleFirestoreError(error, OperationType.WRITE, `profiles/${profile.id}`);
+  }
+}
+
+export async function updateProfileDb(id: string, updates: any) {
+  try {
+    await updateDoc(doc(db, 'profiles', id), updates);
+  } catch (error) {
+    handleFirestoreError(error, OperationType.WRITE, `profiles/${id}`);
+  }
+}
+
+export async function deleteProfileDb(id: string) {
+  try {
+    await deleteDoc(doc(db, 'profiles', id));
+  } catch (error) {
+    handleFirestoreError(error, OperationType.DELETE, `profiles/${id}`);
+  }
+}
+
 export async function resetDatabaseDb() {
   try {
     const collections = ['agenda', 'recados', 'memorias', 'cartinhas', 'conteudos', 'status_joao', 'fuso_horario_alarmes'];

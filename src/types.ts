@@ -11,6 +11,8 @@ export interface AgendaItem {
   status: 'todo' | 'doing' | 'done';
   priority: 'low' | 'medium' | 'high';
   description?: string;
+  createdByName?: string;
+  updatedByName?: string;
 }
 
 export interface RecadoItem {
@@ -21,6 +23,7 @@ export interface RecadoItem {
   priority: 'low' | 'medium' | 'high';
   isPinned: boolean;
   createdAt: string;
+  createdByName?: string;
 }
 
 export interface MemoriaItem {
@@ -31,6 +34,7 @@ export interface MemoriaItem {
   expiration: 'permanent' | '24h' | '7d';
   createdAt: string; // ISO string
   isShared: boolean;
+  createdByName?: string;
 }
 
 export interface CartinhaItem {
@@ -44,6 +48,7 @@ export interface CartinhaItem {
   stampType: 'floral' | 'crown' | 'anchor' | 'heart' | 'retro';
   sealColor: 'burgundy' | 'gold' | 'navy' | 'emerald' | 'bronze';
   isOpened: boolean;
+  createdByName?: string;
 }
 
 export interface ChatMessage {
@@ -62,6 +67,7 @@ export interface ConversaRoom {
   createdAt: string;
   messages: ChatMessage[];
   personaPrompt?: string; // Prompt for simulated responses
+  participantIds?: string[]; // IDs of profiles allowed to view/chat
 }
 
 export interface ConteudoFile {
@@ -72,6 +78,7 @@ export interface ConteudoFile {
   uploadDate: string;
   content?: string; // Text content for document viewing
   author?: string;
+  createdByName?: string;
 }
 
 export interface JoaoStatus {
@@ -86,6 +93,26 @@ export interface TimezoneAlarm {
   timeBrazil: string; // "HH:MM"
   timeEgypt: string;  // "HH:MM"
   sourceTimezone: 'Brazil' | 'Egypt';
+  createdAt: string;
+  createdByName?: string;
+}
+
+export interface ProfilePermissions {
+  agenda: 'none' | 'view' | 'edit';
+  recados: 'none' | 'view' | 'edit';
+  memorias: 'none' | 'view' | 'edit';
+  cartinhas: 'none' | 'view' | 'edit';
+  conversas: 'none' | 'view' | 'edit';
+  conteudos: 'none' | 'view' | 'edit';
+  timezone: 'none' | 'view' | 'edit';
+}
+
+export interface Profile {
+  id: string;
+  name: string;
+  code?: string; // administrative entry code (e.g. "adm" for João)
+  isAdmin: boolean;
+  permissions: ProfilePermissions;
   createdAt: string;
 }
 

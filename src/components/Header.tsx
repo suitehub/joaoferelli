@@ -12,6 +12,8 @@ interface HeaderProps {
   activePanel: string | null;
   onBack: () => void;
   isGuestMode?: boolean;
+  currentProfileName?: string;
+  onLogout?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -20,6 +22,8 @@ export const Header: React.FC<HeaderProps> = ({
   activePanel,
   onBack,
   isGuestMode = false,
+  currentProfileName,
+  onLogout,
 }) => {
   // Map panel keys to friendly display names in Portuguese
   const getPanelDisplayName = (panel: string | null) => {
@@ -82,17 +86,17 @@ export const Header: React.FC<HeaderProps> = ({
                 <>
                   <span className="text-blue-500 font-semibold truncate">{getPanelDisplayName(activePanel)}</span>
                   <span className="text-slate-300 shrink-0">•</span>
-                  <span className="shrink-0">{isGuestMode ? 'Convidado' : 'Mente Ativa'}</span>
+                  <span className="shrink-0">{currentProfileName ? `Perfil: ${currentProfileName}` : (isGuestMode ? 'Convidado' : 'Mente Ativa')}</span>
                 </>
               ) : (
-                'Segundo Cérebro Digital'
+                currentProfileName ? `Segundo Cérebro • Perfil: ${currentProfileName}` : 'Segundo Cérebro Digital'
               )}
             </p>
           </div>
         </div>
 
         {/* Action/Selector Controls */}
-        <div className="shrink-0 flex items-center">
+        <div className="shrink-0 flex items-center gap-2">
           {isGuestMode ? (
             <div className="flex items-center gap-1.5 bg-rose-50 border border-rose-100/50 text-rose-600 px-3 py-2 rounded-xl text-[10px] font-bold tracking-wider font-mono">
               <span className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse" />
@@ -130,6 +134,16 @@ export const Header: React.FC<HeaderProps> = ({
             >
               <ChevronLeft className="w-3.5 h-3.5 shrink-0" />
               <span>Voltar</span>
+            </button>
+          )}
+
+          {onLogout && (
+            <button
+              onClick={onLogout}
+              className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold border border-slate-200 cursor-pointer transition-all"
+              title="Sair do perfil"
+            >
+              Sair
             </button>
           )}
         </div>

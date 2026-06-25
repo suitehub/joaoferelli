@@ -33,6 +33,7 @@ interface ConversasPanelProps {
   onSetGuestName?: (name: string) => void;
   onDeleteRoom?: (roomId: string) => void;
   joaoStatus?: 'dormindo' | 'acordado' | 'disponivel' | 'trabalhando' | 'reuniao';
+  isReadOnly?: boolean;
 }
 
 export const ConversasPanel: React.FC<ConversasPanelProps> = ({
@@ -46,6 +47,7 @@ export const ConversasPanel: React.FC<ConversasPanelProps> = ({
   onSetGuestName,
   onDeleteRoom,
   joaoStatus = 'acordado',
+  isReadOnly = false,
 }) => {
   const [copied, setCopied] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
@@ -169,13 +171,15 @@ export const ConversasPanel: React.FC<ConversasPanelProps> = ({
                 <h3 className="font-display font-bold text-slate-800 text-sm">Canais de Conversa</h3>
                 <p className="text-[10px] text-slate-400">Clique para abrir ou copiar o link</p>
               </div>
-              <button
-                onClick={() => setIsCreating(true)}
-                className="p-1.5 bg-rose-50 text-rose-600 hover:bg-rose-100 rounded-lg text-xs font-semibold cursor-pointer transition-colors"
-                title="Novo canal de conversa"
-              >
-                <Plus className="w-4 h-4" />
-              </button>
+              {!isReadOnly && (
+                <button
+                  onClick={() => setIsCreating(true)}
+                  className="p-1.5 bg-rose-50 text-rose-600 hover:bg-rose-100 rounded-lg text-xs font-semibold cursor-pointer transition-colors"
+                  title="Novo canal de conversa"
+                >
+                  <Plus className="w-4 h-4" />
+                </button>
+              )}
             </div>
 
             {/* Rooms scroll list */}
@@ -340,22 +344,28 @@ export const ConversasPanel: React.FC<ConversasPanelProps> = ({
             </div>
 
             {/* MESSAGE ENTRY BAR */}
-            <form onSubmit={handleSend} className="p-3 bg-white border-t border-slate-100 flex items-center gap-2 shrink-0">
-              <input
-                type="text"
-                required
-                value={typedMessage}
-                onChange={(e) => setTypedMessage(e.target.value)}
-                placeholder="Escreva uma mensagem..."
-                className="flex-1 bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-xs text-slate-800 focus:outline-hidden focus:border-rose-500"
-              />
-              <button
-                type="submit"
-                className="p-2.5 bg-rose-500 hover:bg-rose-600 text-white rounded-xl shadow-2xs cursor-pointer transition-colors shrink-0"
-              >
-                <Send className="w-4 h-4" />
-              </button>
-            </form>
+            {!isReadOnly ? (
+              <form onSubmit={handleSend} className="p-3 bg-white border-t border-slate-100 flex items-center gap-2 shrink-0">
+                <input
+                  type="text"
+                  required
+                  value={typedMessage}
+                  onChange={(e) => setTypedMessage(e.target.value)}
+                  placeholder="Escreva uma mensagem..."
+                  className="flex-1 bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-xs text-slate-800 focus:outline-hidden focus:border-rose-500"
+                />
+                <button
+                  type="submit"
+                  className="p-2.5 bg-rose-500 hover:bg-rose-600 text-white rounded-xl shadow-2xs cursor-pointer transition-colors shrink-0"
+                >
+                  <Send className="w-4 h-4" />
+                </button>
+              </form>
+            ) : (
+              <div className="p-4 bg-slate-50 border-t border-slate-100 text-center text-xs font-semibold text-slate-400">
+                👁️ Apenas Visualização • Você não tem permissão para enviar mensagens neste canal.
+              </div>
+            )}
 
           </div>
         ) : (

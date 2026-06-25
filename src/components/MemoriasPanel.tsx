@@ -24,6 +24,7 @@ interface MemoriasPanelProps {
   onToggleSharing: (id: string) => void;
   currentTab?: 'meu-mundo' | 'compartilhado';
   defaultSharedOnly?: boolean; // If opened from the "Fotos Compartilhadas" card
+  isReadOnly?: boolean;
 }
 
 export const MemoriasPanel: React.FC<MemoriasPanelProps> = ({
@@ -33,6 +34,7 @@ export const MemoriasPanel: React.FC<MemoriasPanelProps> = ({
   onToggleSharing: onToggleShare,
   currentTab,
   defaultSharedOnly = false,
+  isReadOnly = false,
 }) => {
   const [showSharedOnly, setShowSharedOnly] = useState<boolean>(defaultSharedOnly);
   const [isAdding, setIsAdding] = useState(false);
@@ -191,13 +193,15 @@ export const MemoriasPanel: React.FC<MemoriasPanelProps> = ({
             </button>
           </div>
 
-          <button
-            onClick={() => setIsAdding(true)}
-            className="flex items-center justify-center gap-1.5 px-4 py-2.5 bg-pink-600 hover:bg-pink-700 text-white rounded-xl text-xs font-semibold shadow-xs transition-colors cursor-pointer shrink-0 ml-auto sm:ml-0"
-          >
-            <Plus className="w-4 h-4" />
-            <span>Nova Memória</span>
-          </button>
+          {!isReadOnly && (
+            <button
+              onClick={() => setIsAdding(true)}
+              className="flex items-center justify-center gap-1.5 px-4 py-2.5 bg-pink-600 hover:bg-pink-700 text-white rounded-xl text-xs font-semibold shadow-xs transition-colors cursor-pointer shrink-0 ml-auto sm:ml-0"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Nova Memória</span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -250,6 +254,9 @@ export const MemoriasPanel: React.FC<MemoriasPanelProps> = ({
                 {/* Polaroid Text & Date Description */}
                 <div className="mt-4 flex flex-col justify-between flex-1">
                   <p className="text-xs font-medium text-slate-700 italic leading-relaxed line-clamp-3">
+                    {item.createdByName && (
+                      <span className="text-rose-600 font-bold not-italic mr-1">[{item.createdByName}]</span>
+                    )}
                     "{item.caption}"
                   </p>
                   
@@ -262,20 +269,24 @@ export const MemoriasPanel: React.FC<MemoriasPanelProps> = ({
                     </span>
 
                     <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button
-                        onClick={() => onToggleShare(item.id)}
-                        className="p-1 rounded-md text-slate-400 hover:text-blue-500 hover:bg-blue-50 transition-colors cursor-pointer"
-                        title={item.isShared ? "Tornar Privado" : "Compartilhar no mural"}
-                      >
-                        {item.isShared ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-                      </button>
-                      <button
-                        onClick={() => onDeleteItem(item.id)}
-                        className="p-1 rounded-md text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
-                        title="Deletar Memória"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
+                      {!isReadOnly && (
+                        <>
+                          <button
+                            onClick={() => onToggleShare(item.id)}
+                            className="p-1 rounded-md text-slate-400 hover:text-blue-500 hover:bg-blue-50 transition-colors cursor-pointer"
+                            title={item.isShared ? "Tornar Privado" : "Compartilhar no mural"}
+                          >
+                            {item.isShared ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                          </button>
+                          <button
+                            onClick={() => onDeleteItem(item.id)}
+                            className="p-1 rounded-md text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
+                            title="Deletar Memória"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </>
+                      )}
                     </div>
                   </div>
                 </div>

@@ -24,6 +24,7 @@ interface CartinhasPanelProps {
   onOpenLetter: (id: string) => void;
   onDeleteLetter?: (id: string) => void;
   currentTab?: 'meu-mundo' | 'compartilhado';
+  isReadOnly?: boolean;
 }
 
 const STAMP_STYLES = {
@@ -46,8 +47,9 @@ export const CartinhasPanel: React.FC<CartinhasPanelProps> = ({
   letters: items,
   onSendLetter: onAddItem,
   onOpenLetter: onOpenItem,
-  onDeleteLetter: onDeleteItem,
+  onDeleteLetter: onDeleteItem = (_id: string) => {},
   currentTab,
+  isReadOnly = false,
 }) => {
   const [isAdding, setIsAdding] = useState(false);
   const [openedLetter, setOpenedLetter] = useState<CartinhaItem | null>(null);
@@ -124,13 +126,15 @@ export const CartinhasPanel: React.FC<CartinhasPanelProps> = ({
           </p>
         </div>
 
-        <button
-          onClick={() => setIsAdding(true)}
-          className="flex items-center justify-center gap-1.5 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-semibold shadow-xs transition-colors cursor-pointer"
-        >
-          <Plus className="w-4 h-4" />
-          <span>Escrever Cartinha</span>
-        </button>
+        {!isReadOnly && (
+          <button
+            onClick={() => setIsAdding(true)}
+            className="flex items-center justify-center gap-1.5 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-semibold shadow-xs transition-colors cursor-pointer"
+          >
+            <Plus className="w-4 h-4" />
+            <span>Escrever Cartinha</span>
+          </button>
+        )}
       </div>
 
       {/* Grid of Envelopes */}
@@ -164,6 +168,9 @@ export const CartinhasPanel: React.FC<CartinhasPanelProps> = ({
                 </div>
                 
                 <h3 className="font-display font-bold text-slate-800 text-base mt-2 line-clamp-1 pr-14 leading-tight group-hover:text-emerald-700 transition-colors">
+                  {letter.createdByName && (
+                    <span className="text-rose-600 font-bold mr-1">[{letter.createdByName}]</span>
+                  )}
                   {letter.title}
                 </h3>
 
@@ -437,16 +444,20 @@ export const CartinhasPanel: React.FC<CartinhasPanelProps> = ({
 
             {/* Bottom Controls */}
             <div className="bg-[#f2efe6] px-5 py-3 border-t border-[#e5decb] flex justify-between items-center shrink-0">
-              <button
-                onClick={() => {
-                  onDeleteItem(openedLetter.id);
-                  setOpenedLetter(null);
-                }}
-                className="flex items-center gap-1 text-xs text-rose-600 hover:bg-rose-50 border border-rose-100/50 px-2.5 py-1.5 rounded-lg transition-colors cursor-pointer"
-              >
-                <Trash2 className="w-3.5 h-3.5" />
-                <span>Deletar Correspondência</span>
-              </button>
+              {!isReadOnly ? (
+                <button
+                  onClick={() => {
+                    onDeleteItem(openedLetter.id);
+                    setOpenedLetter(null);
+                  }}
+                  className="flex items-center gap-1 text-xs text-rose-600 hover:bg-rose-50 border border-rose-100/50 px-2.5 py-1.5 rounded-lg transition-colors cursor-pointer"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  <span>Deletar Correspondência</span>
+                </button>
+              ) : (
+                <div />
+              )}
               
               <button
                 onClick={() => setOpenedLetter(null)}

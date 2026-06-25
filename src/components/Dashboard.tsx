@@ -16,10 +16,11 @@ import {
   Clock,
   CheckSquare,
   Brain,
-  Globe
+  Globe,
+  Users
 } from 'lucide-react';
 import { motion } from 'motion/react';
-import { AgendaItem, RecadoItem, MemoriaItem, CartinhaItem, ConversaRoom, ConteudoFile, TimezoneAlarm } from '../types';
+import { AgendaItem, RecadoItem, MemoriaItem, CartinhaItem, ConversaRoom, ConteudoFile, TimezoneAlarm, ProfilePermissions } from '../types';
 
 interface DashboardProps {
   currentTab: 'meu-mundo' | 'compartilhado';
@@ -34,6 +35,8 @@ interface DashboardProps {
   joaoStatus?: 'dormindo' | 'acordado' | 'disponivel' | 'trabalhando' | 'reuniao';
   onUpdateStatus?: (status: 'dormindo' | 'acordado' | 'disponivel' | 'trabalhando' | 'reuniao') => void;
   isGuestMode?: boolean;
+  isAdmin?: boolean;
+  permissions?: ProfilePermissions;
 }
 
 export const Dashboard: React.FC<DashboardProps> = ({
@@ -49,7 +52,15 @@ export const Dashboard: React.FC<DashboardProps> = ({
   joaoStatus = 'acordado',
   onUpdateStatus,
   isGuestMode = false,
+  isAdmin = false,
+  permissions,
 }) => {
+  // Quick helper to check permission level
+  const hasAccess = (panelKey: keyof ProfilePermissions) => {
+    if (isAdmin) return true;
+    if (!permissions) return true; // default fallback if none specified
+    return permissions[panelKey] !== 'none';
+  };
   // Compute some quick stats to display on cards
   const pendingTasks = agenda.filter(item => item.status !== 'done').length;
   const doneTasks = agenda.filter(item => item.status === 'done').length;
@@ -147,263 +158,308 @@ export const Dashboard: React.FC<DashboardProps> = ({
         {currentTab === 'meu-mundo' ? (
           <>
             {/* PANEL: AGENDA */}
-            <motion.div 
-              variants={itemVariants}
-              onClick={() => onSelectPanel('agenda')}
-              className="bg-white rounded-3xl p-6 border border-slate-100 hover:border-blue-100 shadow-xs hover:shadow-md transition-all cursor-pointer group flex flex-col justify-between h-[240px]"
-              id="card-agenda"
-            >
-              <div>
-                <div className="flex justify-between items-start">
-                  <div className="p-3 bg-blue-50 text-blue-600 rounded-2xl group-hover:bg-blue-600 group-hover:text-white transition-colors duration-300">
-                    <Calendar className="w-6 h-6" />
+            {hasAccess('agenda') && (
+              <motion.div 
+                variants={itemVariants}
+                onClick={() => onSelectPanel('agenda')}
+                className="bg-white rounded-3xl p-6 border border-slate-100 hover:border-blue-100 shadow-xs hover:shadow-md transition-all cursor-pointer group flex flex-col justify-between h-[240px]"
+                id="card-agenda"
+              >
+                <div>
+                  <div className="flex justify-between items-start">
+                    <div className="p-3 bg-blue-50 text-blue-600 rounded-2xl group-hover:bg-blue-600 group-hover:text-white transition-colors duration-300">
+                      <Calendar className="w-6 h-6" />
+                    </div>
+                    <span className="text-xs font-mono text-slate-400">PAINEL 01</span>
                   </div>
-                  <span className="text-xs font-mono text-slate-400">PAINEL 01</span>
+                  <h3 className="font-display font-bold text-xl text-slate-800 mt-4 group-hover:text-blue-600 transition-colors">
+                    Agenda & Tarefas
+                  </h3>
+                  <p className="text-xs text-slate-400 mt-1">
+                    Calendário mensal unificado com lista de tarefas e visão Kanban interativa.
+                  </p>
                 </div>
-                <h3 className="font-display font-bold text-xl text-slate-800 mt-4 group-hover:text-blue-600 transition-colors">
-                  Agenda & Tarefas
-                </h3>
-                <p className="text-xs text-slate-400 mt-1">
-                  Calendário mensal unificado com lista de tarefas e visão Kanban interativa.
-                </p>
-              </div>
-              <div className="flex justify-between items-center pt-4 border-t border-slate-50">
-                <div className="flex items-center gap-3">
-                  <div className="flex items-center gap-1 text-xs font-mono font-medium text-slate-500">
-                    <CheckSquare className="w-3.5 h-3.5 text-blue-500" />
-                    <span>{pendingTasks} pendentes</span>
+                <div className="flex justify-between items-center pt-4 border-t border-slate-50">
+                  <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-1 text-xs font-mono font-medium text-slate-500">
+                      <CheckSquare className="w-3.5 h-3.5 text-blue-500" />
+                      <span>{pendingTasks} pendentes</span>
+                    </div>
+                    <span className="w-1 h-1 bg-slate-300 rounded-full"></span>
+                    <span className="text-xs font-mono text-emerald-600">{doneTasks} feitas</span>
                   </div>
-                  <span className="w-1 h-1 bg-slate-300 rounded-full"></span>
-                  <span className="text-xs font-mono text-emerald-600">{doneTasks} feitas</span>
+                  <ArrowRight className="w-4 h-4 text-slate-300 group-hover:text-blue-500 group-hover:translate-x-1 transition-all" />
                 </div>
-                <ArrowRight className="w-4 h-4 text-slate-300 group-hover:text-blue-500 group-hover:translate-x-1 transition-all" />
-              </div>
-            </motion.div>
+              </motion.div>
+            )}
 
             {/* PANEL: RECADOS */}
-            <motion.div 
-              variants={itemVariants}
-              onClick={() => onSelectPanel('recados')}
-              className="bg-white rounded-3xl p-6 border border-slate-100 hover:border-amber-100 shadow-xs hover:shadow-md transition-all cursor-pointer group flex flex-col justify-between h-[240px]"
-              id="card-recados"
-            >
-              <div>
-                <div className="flex justify-between items-start">
-                  <div className="p-3 bg-amber-50 text-amber-600 rounded-2xl group-hover:bg-amber-500 group-hover:text-white transition-colors duration-300">
-                    <Pin className="w-6 h-6" />
+            {hasAccess('recados') && (
+              <motion.div 
+                variants={itemVariants}
+                onClick={() => onSelectPanel('recados')}
+                className="bg-white rounded-3xl p-6 border border-slate-100 hover:border-amber-100 shadow-xs hover:shadow-md transition-all cursor-pointer group flex flex-col justify-between h-[240px]"
+                id="card-recados"
+              >
+                <div>
+                  <div className="flex justify-between items-start">
+                    <div className="p-3 bg-amber-50 text-amber-600 rounded-2xl group-hover:bg-amber-500 group-hover:text-white transition-colors duration-300">
+                      <Pin className="w-6 h-6" />
+                    </div>
+                    <span className="text-xs font-mono text-slate-400">PAINEL 02</span>
                   </div>
-                  <span className="text-xs font-mono text-slate-400">PAINEL 02</span>
+                  <h3 className="font-display font-bold text-xl text-slate-800 mt-4 group-hover:text-amber-600 transition-colors">
+                    Mural de Recados
+                  </h3>
+                  <p className="text-xs text-slate-400 mt-1">
+                    Grade de notas visuais coloridas com fixadores para você bater o olho e se lembrar.
+                  </p>
                 </div>
-                <h3 className="font-display font-bold text-xl text-slate-800 mt-4 group-hover:text-amber-600 transition-colors">
-                  Mural de Recados
-                </h3>
-                <p className="text-xs text-slate-400 mt-1">
-                  Grade de notas visuais coloridas com fixadores para você bater o olho e se lembrar.
-                </p>
-              </div>
-              <div className="flex justify-between items-center pt-4 border-t border-slate-50">
-                <div className="flex items-center gap-3">
-                  <div className="flex items-center gap-1 text-xs font-mono font-medium text-slate-500">
-                    <Pin className="w-3.5 h-3.5 text-amber-500 fill-amber-500" />
-                    <span>{pinnedRecados} fixados</span>
+                <div className="flex justify-between items-center pt-4 border-t border-slate-50">
+                  <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-1 text-xs font-mono font-medium text-slate-500">
+                      <Pin className="w-3.5 h-3.5 text-amber-500 fill-amber-500" />
+                      <span>{pinnedRecados} fixados</span>
+                    </div>
+                    <span className="w-1 h-1 bg-slate-300 rounded-full"></span>
+                    <span className="text-xs font-mono text-slate-400">{totalRecados} notas total</span>
                   </div>
-                  <span className="w-1 h-1 bg-slate-300 rounded-full"></span>
-                  <span className="text-xs font-mono text-slate-400">{totalRecados} notas total</span>
+                  <ArrowRight className="w-4 h-4 text-slate-300 group-hover:text-amber-500 group-hover:translate-x-1 transition-all" />
                 </div>
-                <ArrowRight className="w-4 h-4 text-slate-300 group-hover:text-amber-500 group-hover:translate-x-1 transition-all" />
-              </div>
-            </motion.div>
+              </motion.div>
+            )}
 
             {/* PANEL: MEMÓRIAS PRIVADAS */}
-            <motion.div 
-              variants={itemVariants}
-              onClick={() => onSelectPanel('memorias')}
-              className="bg-white rounded-3xl p-6 border border-slate-100 hover:border-pink-100 shadow-xs hover:shadow-md transition-all cursor-pointer group flex flex-col justify-between h-[240px]"
-              id="card-memorias"
-            >
-              <div>
-                <div className="flex justify-between items-start">
-                  <div className="p-3 bg-pink-50 text-pink-600 rounded-2xl group-hover:bg-pink-500 group-hover:text-white transition-colors duration-300">
-                    <Image className="w-6 h-6" />
+            {hasAccess('memorias') && (
+              <motion.div 
+                variants={itemVariants}
+                onClick={() => onSelectPanel('memorias')}
+                className="bg-white rounded-3xl p-6 border border-slate-100 hover:border-pink-100 shadow-xs hover:shadow-md transition-all cursor-pointer group flex flex-col justify-between h-[240px]"
+                id="card-memorias"
+              >
+                <div>
+                  <div className="flex justify-between items-start">
+                    <div className="p-3 bg-pink-50 text-pink-600 rounded-2xl group-hover:bg-pink-500 group-hover:text-white transition-colors duration-300">
+                      <Image className="w-6 h-6" />
+                    </div>
+                    <span className="text-xs font-mono text-slate-400">PAINEL 03</span>
                   </div>
-                  <span className="text-xs font-mono text-slate-400">PAINEL 03</span>
+                  <h3 className="font-display font-bold text-xl text-slate-800 mt-4 group-hover:text-pink-600 transition-colors">
+                    Memórias Diárias
+                  </h3>
+                  <p className="text-xs text-slate-400 mt-1">
+                    Diário fotográfico privado de momentos especiais. Escolha guardar ou definir auto-expiração.
+                  </p>
                 </div>
-                <h3 className="font-display font-bold text-xl text-slate-800 mt-4 group-hover:text-pink-600 transition-colors">
-                  Memórias Diárias
-                </h3>
-                <p className="text-xs text-slate-400 mt-1">
-                  Diário fotográfico privado de momentos especiais. Escolha guardar ou definir auto-expiração.
-                </p>
-              </div>
-              <div className="flex justify-between items-center pt-4 border-t border-slate-50">
-                <div className="flex items-center gap-3">
-                  <span className="text-xs font-mono text-slate-500">{totalMemorias} polaroids catalogadas</span>
+                <div className="flex justify-between items-center pt-4 border-t border-slate-50">
+                  <div className="flex items-center gap-3">
+                    <span className="text-xs font-mono text-slate-500">{totalMemorias} polaroids catalogadas</span>
+                  </div>
+                  <ArrowRight className="w-4 h-4 text-slate-300 group-hover:text-pink-500 group-hover:translate-x-1 transition-all" />
                 </div>
-                <ArrowRight className="w-4 h-4 text-slate-300 group-hover:text-pink-500 group-hover:translate-x-1 transition-all" />
-              </div>
-            </motion.div>
+              </motion.div>
+            )}
 
             {/* PANEL: CONTEÚDOS */}
-            <motion.div 
-              variants={itemVariants}
-              onClick={() => onSelectPanel('conteudos')}
-              className="bg-white rounded-3xl p-6 border border-slate-100 hover:border-indigo-100 shadow-xs hover:shadow-md transition-all cursor-pointer group flex flex-col justify-between h-[240px]"
-              id="card-conteudos"
-            >
-              <div>
-                <div className="flex justify-between items-start">
-                  <div className="p-3 bg-indigo-50 text-indigo-600 rounded-2xl group-hover:bg-indigo-600 group-hover:text-white transition-colors duration-300">
-                    <FolderOpen className="w-6 h-6" />
+            {hasAccess('conteudos') && (
+              <motion.div 
+                variants={itemVariants}
+                onClick={() => onSelectPanel('conteudos')}
+                className="bg-white rounded-3xl p-6 border border-slate-100 hover:border-indigo-100 shadow-xs hover:shadow-md transition-all cursor-pointer group flex flex-col justify-between h-[240px]"
+                id="card-conteudos"
+              >
+                <div>
+                  <div className="flex justify-between items-start">
+                    <div className="p-3 bg-indigo-50 text-indigo-600 rounded-2xl group-hover:bg-indigo-600 group-hover:text-white transition-colors duration-300">
+                      <FolderOpen className="w-6 h-6" />
+                    </div>
+                    <span className="text-xs font-mono text-slate-400">PAINEL 04</span>
                   </div>
-                  <span className="text-xs font-mono text-slate-400">PAINEL 04</span>
+                  <h3 className="font-display font-bold text-xl text-slate-800 mt-4 group-hover:text-indigo-600 transition-colors">
+                    Biblioteca Pessoal
+                  </h3>
+                  <p className="text-xs text-slate-400 mt-1">
+                    Organizador pessoal de sermões, estudos bíblicos, anotações de aulas e materiais de apoio.
+                  </p>
                 </div>
-                <h3 className="font-display font-bold text-xl text-slate-800 mt-4 group-hover:text-indigo-600 transition-colors">
-                  Biblioteca Pessoal
-                </h3>
-                <p className="text-xs text-slate-400 mt-1">
-                  Organizador pessoal de sermões, estudos bíblicos, anotações de aulas e materiais de apoio.
-                </p>
-              </div>
-              <div className="flex justify-between items-center pt-4 border-t border-slate-50">
-                <div className="flex items-center gap-3">
-                  <span className="text-xs font-mono text-slate-500">{totalConteudos} arquivos indexados</span>
+                <div className="flex justify-between items-center pt-4 border-t border-slate-50">
+                  <div className="flex items-center gap-3">
+                    <span className="text-xs font-mono text-slate-500">{totalConteudos} arquivos indexados</span>
+                  </div>
+                  <ArrowRight className="w-4 h-4 text-slate-300 group-hover:text-indigo-500 group-hover:translate-x-1 transition-all" />
                 </div>
-                <ArrowRight className="w-4 h-4 text-slate-300 group-hover:text-indigo-500 group-hover:translate-x-1 transition-all" />
-              </div>
-            </motion.div>
+              </motion.div>
+            )}
 
             {/* PANEL: FUSO HORÁRIO & ALARMES */}
-            <motion.div 
-              variants={itemVariants}
-              onClick={() => onSelectPanel('fuso-horario')}
-              className="bg-white rounded-3xl p-6 border border-slate-100 hover:border-violet-100 shadow-xs hover:shadow-md transition-all cursor-pointer group flex flex-col justify-between h-[240px]"
-              id="card-fuso-horario"
-            >
-              <div>
-                <div className="flex justify-between items-start">
-                  <div className="p-3 bg-violet-50 text-violet-600 rounded-2xl group-hover:bg-violet-600 group-hover:text-white transition-colors duration-300">
-                    <Globe className="w-6 h-6" />
+            {hasAccess('timezone') && (
+              <motion.div 
+                variants={itemVariants}
+                onClick={() => onSelectPanel('fuso-horario')}
+                className="bg-white rounded-3xl p-6 border border-slate-100 hover:border-violet-100 shadow-xs hover:shadow-md transition-all cursor-pointer group flex flex-col justify-between h-[240px]"
+                id="card-fuso-horario"
+              >
+                <div>
+                  <div className="flex justify-between items-start">
+                    <div className="p-3 bg-violet-50 text-violet-600 rounded-2xl group-hover:bg-violet-600 group-hover:text-white transition-colors duration-300">
+                      <Globe className="w-6 h-6" />
+                    </div>
+                    <span className="text-xs font-mono text-slate-400">PAINEL 05</span>
                   </div>
-                  <span className="text-xs font-mono text-slate-400">PAINEL 05</span>
+                  <h3 className="font-display font-bold text-xl text-slate-800 mt-4 group-hover:text-violet-600 transition-colors">
+                    Fuso Horário & Alarmes
+                  </h3>
+                  <p className="text-xs text-slate-400 mt-1">
+                    Clocks em tempo real do Brasil e Egito, planejador de horários e lembretes de eventos.
+                  </p>
                 </div>
-                <h3 className="font-display font-bold text-xl text-slate-800 mt-4 group-hover:text-violet-600 transition-colors">
-                  Fuso Horário & Alarmes
-                </h3>
-                <p className="text-xs text-slate-400 mt-1">
-                  Clocks em tempo real do Brasil e Egito, planejador de horários e lembretes de eventos.
-                </p>
-              </div>
-              <div className="flex justify-between items-center pt-4 border-t border-slate-50">
-                <div className="flex items-center gap-3">
-                  <span className="text-xs font-mono text-slate-500">{timezoneAlarms.length} cadastrados</span>
+                <div className="flex justify-between items-center pt-4 border-t border-slate-50">
+                  <div className="flex items-center gap-3">
+                    <span className="text-xs font-mono text-slate-500">{timezoneAlarms.length} cadastrados</span>
+                  </div>
+                  <ArrowRight className="w-4 h-4 text-slate-300 group-hover:text-violet-500 group-hover:translate-x-1 transition-all" />
                 </div>
-                <ArrowRight className="w-4 h-4 text-slate-300 group-hover:text-violet-500 group-hover:translate-x-1 transition-all" />
-              </div>
-            </motion.div>
+              </motion.div>
+            )}
+
+            {/* ADMIN-ONLY PANEL: GESTÃO DE PERFIS */}
+            {isAdmin && (
+              <motion.div 
+                variants={itemVariants}
+                onClick={() => onSelectPanel('perfis')}
+                className="bg-rose-50/20 rounded-3xl p-6 border border-rose-100 hover:border-rose-300 shadow-xs hover:shadow-md transition-all cursor-pointer group flex flex-col justify-between h-[240px]"
+                id="card-perfis"
+              >
+                <div>
+                  <div className="flex justify-between items-start">
+                    <div className="p-3 bg-rose-500 text-white rounded-2xl group-hover:bg-rose-600 transition-colors duration-300">
+                      <Users className="w-6 h-6" />
+                    </div>
+                    <span className="text-xs font-mono text-rose-500 font-bold">ADMINISTRATIVO</span>
+                  </div>
+                  <h3 className="font-display font-bold text-xl text-slate-800 mt-4 group-hover:text-rose-600 transition-colors">
+                    Perfis & Acessos
+                  </h3>
+                  <p className="text-xs text-slate-400 mt-1">
+                    Crie e gerencie perfis, controle matriz de permissões de visualização/edição e obtenha links de login automático.
+                  </p>
+                </div>
+                <div className="flex justify-between items-center pt-4 border-t border-rose-100">
+                  <span className="text-xs font-mono text-rose-700 font-bold">Gerenciar Conexões</span>
+                  <ArrowRight className="w-4 h-4 text-rose-400 group-hover:text-rose-600 group-hover:translate-x-1 transition-all" />
+                </div>
+              </motion.div>
+            )}
           </>
         ) : (
           <>
             {/* PANEL: CARTINHAS */}
-            <motion.div 
-              variants={itemVariants}
-              onClick={() => onSelectPanel('cartinhas')}
-              className="bg-white rounded-3xl p-6 border border-slate-100 hover:border-emerald-100 shadow-xs hover:shadow-md transition-all cursor-pointer group flex flex-col justify-between h-[240px]"
-              id="card-cartinhas"
-            >
-              <div>
-                <div className="flex justify-between items-start">
-                  <div className="p-3 bg-emerald-50 text-emerald-600 rounded-2xl group-hover:bg-emerald-600 group-hover:text-white transition-colors duration-300">
-                    <Mail className="w-6 h-6" />
-                  </div>
-                  <span className="text-xs font-mono text-slate-400">COMPARTILHADO 01</span>
-                </div>
-                <h3 className="font-display font-bold text-xl text-slate-800 mt-4 group-hover:text-emerald-600 transition-colors">
-                  Cartinhas Digitais
-                </h3>
-                <p className="text-xs text-slate-400 mt-1">
-                  Escreva e programe correspondências com design de papel tradicional, selos e lacres de cera fofos.
-                </p>
-              </div>
-              <div className="flex justify-between items-center pt-4 border-t border-slate-50">
-                <div className="flex items-center gap-3">
-                  {unreadCartinhas > 0 ? (
-                    <div className="flex items-center gap-1 text-xs font-mono font-medium text-emerald-600">
-                      <Clock className="w-3.5 h-3.5 animate-pulse" />
-                      <span>{unreadCartinhas} novas para abrir!</span>
+            {hasAccess('cartinhas') && (
+              <motion.div 
+                variants={itemVariants}
+                onClick={() => onSelectPanel('cartinhas')}
+                className="bg-white rounded-3xl p-6 border border-slate-100 hover:border-emerald-100 shadow-xs hover:shadow-md transition-all cursor-pointer group flex flex-col justify-between h-[240px]"
+                id="card-cartinhas"
+              >
+                <div>
+                  <div className="flex justify-between items-start">
+                    <div className="p-3 bg-emerald-50 text-emerald-600 rounded-2xl group-hover:bg-emerald-600 group-hover:text-white transition-colors duration-300">
+                      <Mail className="w-6 h-6" />
                     </div>
-                  ) : (
-                    <span className="text-xs font-mono text-slate-400">Sem cartas pendentes</span>
-                  )}
-                  {pendingCartinhas > 0 && (
-                    <>
-                      <span className="w-1 h-1 bg-slate-300 rounded-full"></span>
-                      <span className="text-xs font-mono text-slate-400">{pendingCartinhas} agendadas</span>
-                    </>
-                  )}
+                    <span className="text-xs font-mono text-slate-400">COMPARTILHADO 01</span>
+                  </div>
+                  <h3 className="font-display font-bold text-xl text-slate-800 mt-4 group-hover:text-emerald-600 transition-colors">
+                    Cartinhas Digitais
+                  </h3>
+                  <p className="text-xs text-slate-400 mt-1">
+                    Escreva e programe correspondências com design de papel tradicional, selos e lacres de cera fofos.
+                  </p>
                 </div>
-                <ArrowRight className="w-4 h-4 text-slate-300 group-hover:text-emerald-500 group-hover:translate-x-1 transition-all" />
-              </div>
-            </motion.div>
+                <div className="flex justify-between items-center pt-4 border-t border-slate-50">
+                  <div className="flex items-center gap-3">
+                    {unreadCartinhas > 0 ? (
+                      <div className="flex items-center gap-1 text-xs font-mono font-medium text-emerald-600">
+                        <Clock className="w-3.5 h-3.5 animate-pulse" />
+                        <span>{unreadCartinhas} novas para abrir!</span>
+                      </div>
+                    ) : (
+                      <span className="text-xs font-mono text-slate-400">Sem cartas pendentes</span>
+                    )}
+                    {pendingCartinhas > 0 && (
+                      <>
+                        <span className="w-1 h-1 bg-slate-300 rounded-full"></span>
+                        <span className="text-xs font-mono text-slate-400">{pendingCartinhas} agendadas</span>
+                      </>
+                    )}
+                  </div>
+                  <ArrowRight className="w-4 h-4 text-slate-300 group-hover:text-emerald-500 group-hover:translate-x-1 transition-all" />
+                </div>
+              </motion.div>
+            )}
 
             {/* PANEL: CONVERSAS */}
-            <motion.div 
-              variants={itemVariants}
-              onClick={() => onSelectPanel('conversas')}
-              className="bg-white rounded-3xl p-6 border border-slate-100 hover:border-rose-100 shadow-xs hover:shadow-md transition-all cursor-pointer group flex flex-col justify-between h-[240px]"
-              id="card-conversas"
-            >
-              <div>
-                <div className="flex justify-between items-start">
-                  <div className="p-3 bg-rose-50 text-rose-600 rounded-2xl group-hover:bg-rose-500 group-hover:text-white transition-colors duration-300">
-                    <MessageSquare className="w-6 h-6" />
+            {hasAccess('conversas') && (
+              <motion.div 
+                variants={itemVariants}
+                onClick={() => onSelectPanel('conversas')}
+                className="bg-white rounded-3xl p-6 border border-slate-100 hover:border-rose-100 shadow-xs hover:shadow-md transition-all cursor-pointer group flex flex-col justify-between h-[240px]"
+                id="card-conversas"
+              >
+                <div>
+                  <div className="flex justify-between items-start">
+                    <div className="p-3 bg-rose-50 text-rose-600 rounded-2xl group-hover:bg-rose-500 group-hover:text-white transition-colors duration-300">
+                      <MessageSquare className="w-6 h-6" />
+                    </div>
+                    <span className="text-xs font-mono text-slate-400">COMPARTILHADO 02</span>
                   </div>
-                  <span className="text-xs font-mono text-slate-400">COMPARTILHADO 02</span>
+                  <h3 className="font-display font-bold text-xl text-slate-800 mt-4 group-hover:text-rose-600 transition-colors">
+                    Conversas & Canais
+                  </h3>
+                  <p className="text-xs text-slate-400 mt-1">
+                    Espaços independentes compartilhados através de links diretos e exclusivos para conexão direta.
+                  </p>
                 </div>
-                <h3 className="font-display font-bold text-xl text-slate-800 mt-4 group-hover:text-rose-600 transition-colors">
-                  Conversas & Canais
-                </h3>
-                <p className="text-xs text-slate-400 mt-1">
-                  Espaços independentes compartilhados através de links diretos e exclusivos para conexão direta.
-                </p>
-              </div>
-              <div className="flex justify-between items-center pt-4 border-t border-slate-50">
-                <div className="flex items-center gap-3">
-                  <span className="text-xs font-mono text-slate-500">{totalConversas} salas de bate-papo ativas</span>
+                <div className="flex justify-between items-center pt-4 border-t border-slate-50">
+                  <div className="flex items-center gap-3">
+                    <span className="text-xs font-mono text-slate-500">{totalConversas} salas de bate-papo ativas</span>
+                  </div>
+                  <ArrowRight className="w-4 h-4 text-slate-300 group-hover:text-rose-500 group-hover:translate-x-1 transition-all" />
                 </div>
-                <ArrowRight className="w-4 h-4 text-slate-300 group-hover:text-rose-500 group-hover:translate-x-1 transition-all" />
-              </div>
-            </motion.div>
+              </motion.div>
+            )}
 
             {/* PANEL: MEMÓRIAS COMPARTILHADAS */}
-            <motion.div 
-              variants={itemVariants}
-              onClick={() => onSelectPanel('memorias-compartilhadas')}
-              className="bg-white rounded-3xl p-6 border border-slate-100 hover:border-pink-100 shadow-xs hover:shadow-md transition-all cursor-pointer group flex flex-col justify-between h-[240px]"
-              id="card-memorias-compartilhadas"
-            >
-              <div>
-                <div className="flex justify-between items-start">
-                  <div className="p-3 bg-pink-50 text-pink-600 rounded-2xl group-hover:bg-pink-500 group-hover:text-white transition-colors duration-300">
-                    <Image className="w-6 h-6" />
+            {hasAccess('memorias') && (
+              <motion.div 
+                variants={itemVariants}
+                onClick={() => onSelectPanel('memorias-compartilhadas')}
+                className="bg-white rounded-3xl p-6 border border-slate-100 hover:border-pink-100 shadow-xs hover:shadow-md transition-all cursor-pointer group flex flex-col justify-between h-[240px]"
+                id="card-memorias-compartilhadas"
+              >
+                <div>
+                  <div className="flex justify-between items-start">
+                    <div className="p-3 bg-pink-50 text-pink-600 rounded-2xl group-hover:bg-pink-500 group-hover:text-white transition-colors duration-300">
+                      <Image className="w-6 h-6" />
+                    </div>
+                    <span className="text-xs font-mono text-slate-400">COMPARTILHADO 03</span>
                   </div>
-                  <span className="text-xs font-mono text-slate-400">COMPARTILHADO 03</span>
+                  <h3 className="font-display font-bold text-xl text-slate-800 mt-4 group-hover:text-pink-600 transition-colors">
+                    Fotos Compartilhadas
+                  </h3>
+                  <p className="text-xs text-slate-400 mt-1">
+                    Mural visual público de memórias e momentos inesquecíveis que você optou por compartilhar.
+                  </p>
                 </div>
-                <h3 className="font-display font-bold text-xl text-slate-800 mt-4 group-hover:text-pink-600 transition-colors">
-                  Fotos Compartilhadas
-                </h3>
-                <p className="text-xs text-slate-400 mt-1">
-                  Mural visual público de memórias e momentos inesquecíveis que você optou por compartilhar.
-                </p>
-              </div>
-              <div className="flex justify-between items-center pt-4 border-t border-slate-50">
-                <div className="flex items-center gap-3">
-                  <span className="text-xs font-mono text-slate-500">
-                    {memorias.filter(m => m.isShared).length} fotos públicas
-                  </span>
+                <div className="flex justify-between items-center pt-4 border-t border-slate-50">
+                  <div className="flex items-center gap-3">
+                    <span className="text-xs font-mono text-slate-500">
+                      {memorias.filter(m => m.isShared).length} fotos públicas
+                    </span>
+                  </div>
+                  <ArrowRight className="w-4 h-4 text-slate-300 group-hover:text-pink-500 group-hover:translate-x-1 transition-all" />
                 </div>
-                <ArrowRight className="w-4 h-4 text-slate-300 group-hover:text-pink-500 group-hover:translate-x-1 transition-all" />
-              </div>
-            </motion.div>
+              </motion.div>
+            )}
           </>
         )}
 
