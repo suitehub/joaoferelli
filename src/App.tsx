@@ -17,6 +17,7 @@ import { CartinhasPanel } from './components/CartinhasPanel';
 import { ConversasPanel } from './components/ConversasPanel';
 import { ConteudosPanel } from './components/ConteudosPanel';
 import { TimezonePanel } from './components/TimezonePanel';
+import { PWABanner } from './components/PWABanner';
 
 import { auth, db, handleFirestoreError, OperationType } from './firebase';
 
@@ -679,6 +680,7 @@ export default function App() {
 
       {/* Main app viewport content */}
       <main className="flex-1">
+        {activePanelId === null && <PWABanner />}
         {activePanelId === null ? (
           <Dashboard 
             currentTab={currentTab}
