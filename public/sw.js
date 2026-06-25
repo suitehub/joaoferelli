@@ -1,52 +1,73 @@
 const CACHE_NAME = 'cabeca-do-joao-v1';
-const ASSETS = [
-  '/',
-  '/index.html',
-  '/logojoao.png',
-  '/manifest.json'
+const ASSETS_TO_CACHE = [
+  './',
+  'index.html',
+  'manifest.json',
+  'logojoao.png'
 ];
 
-self.addEventListener('install', (e) => {
-  e.waitUntil(
+// Install Event
+self.addEventListener('install', (event) => {
+  event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(ASSETS).catch(err => {
-        console.warn('Cache assets failed on install, skipping offline-first precache assets: ', err);
-      });
+      return cache.addAll(ASSETS_TO_CACHE);
+    }).then(() => {
+      return self.skipWaiting();
     })
   );
-  self.skipWaiting();
 });
 
-self.addEventListener('activate', (e) => {
-  e.waitUntil(
-    caches.keys().then((keys) => {
+// Activate Event
+self.addEventListener('activate', (event) => {
+  event.waitUntil(
+    caches.keys().then((cacheNames) => {
       return Promise.all(
-        keys.map((key) => {
-          if (key !== CACHE_NAME) {
-            return caches.delete(key);
+        cacheNames.map((cache) => {
+          if (cache !== CACHE_NAME) {
+            return caches.delete(cache);
           }
         })
       );
-    }).then(() => self.clients.claim())
+    }).then(() => {
+      return self.clients.claim();
+    })
   );
 });
 
-self.addEventListener('fetch', (e) => {
-  if (e.request.method !== 'GET') return;
-  
-  e.respondWith(
-    fetch(e.request)
-      .then((res) => {
-        if (res.status === 200 && e.request.url.startsWith(self.location.origin)) {
-          const resClone = res.clone();
+// Fetch Event - Network first, falling back to cache
+self.addEventListener('fetch', (event) => {
+  // Only handle standard GET requests
+  if (event.request.method !== 'GET') return;
+
+  // Ignore API calls, Firestore, and Hot Module Replacement
+  const url = new URL(event.request.url);
+  if (url.pathname.startsWith('/api') || url.hostname.includes('firestore') || url.hostname.includes('firebase')) {
+    return;
+  }
+
+  event.respondWith(
+    fetch(event.request)
+      .then((response) => {
+        // If valid response, clone and cache it
+        if (response && response.status === 200 && response.type === 'basic') {
+          const responseToCache = response.clone();
           caches.open(CACHE_NAME).then((cache) => {
-            cache.put(e.request, resClone);
+            cache.put(event.request, responseToCache);
           });
         }
-        return res;
+        return response;
       })
       .catch(() => {
-        return caches.match(e.request);
+        // Fallback to cache if network fails
+        return caches.match(event.request).then((cachedResponse) => {
+          if (cachedResponse) {
+            return cachedResponse;
+          }
+          // If it's a navigation request (page refresh), return the index.html cached file
+          if (event.request.mode === 'navigate') {
+            return caches.match('./') || caches.match('index.html');
+          }
+        });
       })
   );
 });
