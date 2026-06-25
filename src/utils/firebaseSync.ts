@@ -279,3 +279,36 @@ export async function deleteConteudoFileDb(id: string) {
     handleFirestoreError(error, OperationType.DELETE, `conteudos/${id}`);
   }
 }
+
+export async function resetDatabaseDb() {
+  try {
+    const collections = ['agenda', 'recados', 'memorias', 'cartinhas', 'conteudos'];
+    
+    // Delete flat collections
+    for (const colName of collections) {
+      const snap = await getDocs(collection(db, colName));
+      const batch = writeBatch(db);
+      snap.forEach((d) => {
+        batch.delete(doc(db, colName, d.id));
+      });
+      await batch.commit();
+    }
+
+    // Delete conversas & subcollection messages
+    const conversasSnap = await getDocs(collection(db, 'conversas'));
+    for (const roomDoc of conversasSnap.docs) {
+      const msgsSnap = await getDocs(collection(db, 'conversas', roomDoc.id, 'messages'));
+      const msgBatch = writeBatch(db);
+      msgsSnap.forEach((m) => {
+        msgBatch.delete(doc(db, 'conversas', roomDoc.id, 'messages', m.id));
+      });
+      await msgBatch.commit();
+      await deleteDoc(doc(db, 'conversas', roomDoc.id));
+    }
+    
+    // Re-seed with fresh initial presentation data
+    await seedDatabaseIfEmpty();
+  } catch (error) {
+    console.error('Error resetting database:', error);
+  }
+}

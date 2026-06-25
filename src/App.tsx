@@ -48,7 +48,8 @@ import {
   deleteConversaRoomDb,
   addChatMessageDb,
   addConteudoFileDb,
-  deleteConteudoFileDb
+  deleteConteudoFileDb,
+  resetDatabaseDb
 } from './utils/firebaseSync';
 
 export default function App() {
@@ -103,6 +104,31 @@ export default function App() {
   const [guestName, setGuestName] = useState<string>(() => {
     return localStorage.getItem('joao_guest_name') || '';
   });
+  const [isResetting, setIsResetting] = useState(false);
+
+  const handleResetData = async () => {
+    if (confirm('Tem certeza de que deseja resetar completamente todos os dados do aplicativo para o estado original? Isso excluirá todas as suas alterações e restaurará os dados iniciais de fábrica.')) {
+      setIsResetting(true);
+      try {
+        // Clear LocalStorage cache
+        localStorage.removeItem('joao_agenda');
+        localStorage.removeItem('joao_recados');
+        localStorage.removeItem('joao_memorias');
+        localStorage.removeItem('joao_cartinhas');
+        localStorage.removeItem('joao_conversas');
+        localStorage.removeItem('joao_conteudos');
+        
+        await resetDatabaseDb();
+        alert('Dados resetados com sucesso! O aplicativo será recarregado.');
+        window.location.reload();
+      } catch (err) {
+        console.error(err);
+        alert('Ocorreu um erro ao resetar os dados.');
+      } finally {
+        setIsResetting(false);
+      }
+    }
+  };
 
   const ignoreHashChange = useRef(false);
 
@@ -687,10 +713,30 @@ export default function App() {
       </main>
 
       {/* Tiny clean footer credit */}
-      <footer className="py-6 text-center text-[10px] text-slate-400 font-mono border-t border-slate-100 bg-white shrink-0">
+      <footer className="py-6 text-center text-[10px] text-slate-400 font-mono border-t border-slate-100 bg-white shrink-0 flex flex-col items-center gap-2">
         <div>Cabeça do João — Segundo Cérebro Digital © {new Date().getFullYear()}</div>
-        <div className="mt-1 text-slate-300">Construído em React com Inteligência Artificial Gemini</div>
+        <div className="text-slate-300">Construído em React com Inteligência Artificial Gemini</div>
+        
+        {!isGuestMode && (
+          <button
+            onClick={handleResetData}
+            disabled={isResetting}
+            className="mt-2 text-[9px] font-bold tracking-wider uppercase px-3 py-1.5 rounded-lg border border-red-100 text-red-500 hover:bg-red-50 cursor-pointer transition-colors"
+          >
+            Resetar Mente (Dados de Fábrica)
+          </button>
+        )}
       </footer>
+
+      {isResetting && (
+        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 flex flex-col items-center justify-center text-white">
+          <div className="relative mb-6">
+            <div className="w-16 h-16 rounded-full border-4 border-rose-500/20 border-t-rose-500 animate-spin" />
+          </div>
+          <p className="font-display font-bold text-lg">Resetando Mente do João...</p>
+          <p className="text-xs text-slate-400 mt-2 font-mono">Restaurando dados iniciais de fábrica no Firestore</p>
+        </div>
+      )}
 
     </div>
   );
