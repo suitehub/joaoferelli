@@ -15,10 +15,11 @@ import {
   ArrowRight,
   Clock,
   CheckSquare,
-  Brain
+  Brain,
+  Globe
 } from 'lucide-react';
 import { motion } from 'motion/react';
-import { AgendaItem, RecadoItem, MemoriaItem, CartinhaItem, ConversaRoom, ConteudoFile } from '../types';
+import { AgendaItem, RecadoItem, MemoriaItem, CartinhaItem, ConversaRoom, ConteudoFile, TimezoneAlarm } from '../types';
 
 interface DashboardProps {
   currentTab: 'meu-mundo' | 'compartilhado';
@@ -29,6 +30,10 @@ interface DashboardProps {
   cartinhas: CartinhaItem[];
   conversas: ConversaRoom[];
   conteudos: ConteudoFile[];
+  timezoneAlarms?: TimezoneAlarm[];
+  joaoStatus?: 'dormindo' | 'acordado' | 'disponivel' | 'trabalhando' | 'reuniao';
+  onUpdateStatus?: (status: 'dormindo' | 'acordado' | 'disponivel' | 'trabalhando' | 'reuniao') => void;
+  isGuestMode?: boolean;
 }
 
 export const Dashboard: React.FC<DashboardProps> = ({
@@ -40,6 +45,10 @@ export const Dashboard: React.FC<DashboardProps> = ({
   cartinhas,
   conversas,
   conteudos,
+  timezoneAlarms = [],
+  joaoStatus = 'acordado',
+  onUpdateStatus,
+  isGuestMode = false,
 }) => {
   // Compute some quick stats to display on cards
   const pendingTasks = agenda.filter(item => item.status !== 'done').length;
@@ -85,6 +94,46 @@ export const Dashboard: React.FC<DashboardProps> = ({
             ? 'Organize sua rotina, rascunhe seus pensamentos, guarde seus estudos preciosos e registre suas memórias diárias com tranquilidade.'
             : 'Envie correspondências especiais, acesse links de conversas exclusivas e mantenha fotos compartilhadas com quem importa.'}
         </p>
+
+        {/* João's Status Selector (Owner) or Indicator (Guest) */}
+        {isGuestMode ? (
+          <div className="mt-4 inline-flex items-center gap-2 px-4 py-2 bg-slate-50 border border-slate-100 rounded-2xl text-slate-700 text-xs sm:text-sm">
+            <span className="font-medium text-slate-500">Status do João:</span>
+            {joaoStatus === 'dormindo' && <span className="font-bold flex items-center gap-1 text-indigo-600 bg-indigo-50 px-2.5 py-0.5 rounded-lg">😴 Dormindo</span>}
+            {joaoStatus === 'acordado' && <span className="font-bold flex items-center gap-1 text-amber-600 bg-amber-50 px-2.5 py-0.5 rounded-lg">🌅 Acordado</span>}
+            {joaoStatus === 'disponivel' && <span className="font-bold flex items-center gap-1 text-emerald-600 bg-emerald-50 px-2.5 py-0.5 rounded-lg">✅ Disponível</span>}
+            {joaoStatus === 'trabalhando' && <span className="font-bold flex items-center gap-1 text-blue-600 bg-blue-50 px-2.5 py-0.5 rounded-lg">💼 Trabalhando</span>}
+            {joaoStatus === 'reuniao' && <span className="font-bold flex items-center gap-1 text-rose-600 bg-rose-50 px-2.5 py-0.5 rounded-lg">⏱️ Em Reunião</span>}
+          </div>
+        ) : (
+          <div className="mt-4 flex flex-col sm:flex-row sm:items-center gap-3">
+            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Definir meu Status:</span>
+            <div className="flex flex-wrap gap-2">
+              {[
+                { id: 'dormindo', label: '😴 Dormindo', color: 'bg-indigo-50 text-indigo-700 border-indigo-100 ring-indigo-300' },
+                { id: 'acordado', label: '🌅 Acordado', color: 'bg-amber-50 text-amber-700 border-amber-100 ring-amber-300' },
+                { id: 'disponivel', label: '✅ Disponível', color: 'bg-emerald-50 text-emerald-700 border-emerald-100 ring-emerald-300' },
+                { id: 'trabalhando', label: '💼 Trabalhando', color: 'bg-blue-50 text-blue-700 border-blue-100 ring-blue-300' },
+                { id: 'reuniao', label: '⏱️ Em Reunião', color: 'bg-rose-50 text-rose-700 border-rose-100 ring-rose-300' },
+              ].map((item) => {
+                const isActive = joaoStatus === item.id;
+                return (
+                  <button
+                    key={item.id}
+                    onClick={() => onUpdateStatus?.(item.id as any)}
+                    className={`px-3 py-1.5 text-xs font-bold rounded-xl border cursor-pointer transition-all ${
+                      isActive 
+                        ? `${item.color} shadow-xs ring-2 scale-102` 
+                        : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50 hover:scale-101'
+                    }`}
+                  >
+                    {item.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Grid Layout based on selected World */}
@@ -220,6 +269,35 @@ export const Dashboard: React.FC<DashboardProps> = ({
                   <span className="text-xs font-mono text-slate-500">{totalConteudos} arquivos indexados</span>
                 </div>
                 <ArrowRight className="w-4 h-4 text-slate-300 group-hover:text-indigo-500 group-hover:translate-x-1 transition-all" />
+              </div>
+            </motion.div>
+
+            {/* PANEL: FUSO HORÁRIO & ALARMES */}
+            <motion.div 
+              variants={itemVariants}
+              onClick={() => onSelectPanel('fuso-horario')}
+              className="bg-white rounded-3xl p-6 border border-slate-100 hover:border-violet-100 shadow-xs hover:shadow-md transition-all cursor-pointer group flex flex-col justify-between h-[240px]"
+              id="card-fuso-horario"
+            >
+              <div>
+                <div className="flex justify-between items-start">
+                  <div className="p-3 bg-violet-50 text-violet-600 rounded-2xl group-hover:bg-violet-600 group-hover:text-white transition-colors duration-300">
+                    <Globe className="w-6 h-6" />
+                  </div>
+                  <span className="text-xs font-mono text-slate-400">PAINEL 05</span>
+                </div>
+                <h3 className="font-display font-bold text-xl text-slate-800 mt-4 group-hover:text-violet-600 transition-colors">
+                  Fuso Horário & Alarmes
+                </h3>
+                <p className="text-xs text-slate-400 mt-1">
+                  Clocks em tempo real do Brasil e Egito, planejador de horários e lembretes de eventos.
+                </p>
+              </div>
+              <div className="flex justify-between items-center pt-4 border-t border-slate-50">
+                <div className="flex items-center gap-3">
+                  <span className="text-xs font-mono text-slate-500">{timezoneAlarms.length} cadastrados</span>
+                </div>
+                <ArrowRight className="w-4 h-4 text-slate-300 group-hover:text-violet-500 group-hover:translate-x-1 transition-all" />
               </div>
             </motion.div>
           </>

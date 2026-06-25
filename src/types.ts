@@ -73,3 +73,19 @@ export interface ConteudoFile {
   content?: string; // Text content for document viewing
   author?: string;
 }
+
+export interface JoaoStatus {
+  id: string; // 'current'
+  status: 'dormindo' | 'acordado' | 'disponivel' | 'trabalhando' | 'reuniao';
+  lastUpdated: string;
+}
+
+export interface TimezoneAlarm {
+  id: string;
+  title: string;
+  timeBrazil: string; // "HH:MM"
+  timeEgypt: string;  // "HH:MM"
+  sourceTimezone: 'Brazil' | 'Egypt';
+  createdAt: string;
+}
+

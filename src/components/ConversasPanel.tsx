@@ -32,6 +32,7 @@ interface ConversasPanelProps {
   guestName?: string;
   onSetGuestName?: (name: string) => void;
   onDeleteRoom?: (roomId: string) => void;
+  joaoStatus?: 'dormindo' | 'acordado' | 'disponivel' | 'trabalhando' | 'reuniao';
 }
 
 export const ConversasPanel: React.FC<ConversasPanelProps> = ({
@@ -44,6 +45,7 @@ export const ConversasPanel: React.FC<ConversasPanelProps> = ({
   guestName = '',
   onSetGuestName,
   onDeleteRoom,
+  joaoStatus = 'acordado',
 }) => {
   const [copied, setCopied] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
@@ -274,6 +276,18 @@ export const ConversasPanel: React.FC<ConversasPanelProps> = ({
                     <span>Excluir</span>
                   </button>
                 )}
+              </div>
+            </div>
+
+            {/* Joao's Real-time Status Alert Bar */}
+            <div className="px-4 py-2 bg-gradient-to-r from-blue-50/30 to-indigo-50/30 border-b border-slate-100/60 flex items-center justify-between text-[11px] font-medium gap-2 shrink-0">
+              <span className="text-slate-500 font-sans">Status atual do João:</span>
+              <div className="font-bold flex items-center gap-1">
+                {joaoStatus === 'dormindo' && <span className="text-indigo-600 bg-indigo-50 px-2.5 py-0.5 rounded-lg border border-indigo-100">😴 Dormindo</span>}
+                {joaoStatus === 'acordado' && <span className="text-amber-600 bg-amber-50 px-2.5 py-0.5 rounded-lg border border-amber-100">🌅 Acordado</span>}
+                {joaoStatus === 'disponivel' && <span className="text-emerald-600 bg-emerald-50 px-2.5 py-0.5 rounded-lg border border-emerald-100">✅ Disponível</span>}
+                {joaoStatus === 'trabalhando' && <span className="text-blue-600 bg-blue-50 px-2.5 py-0.5 rounded-lg border border-blue-100">💼 Trabalhando</span>}
+                {joaoStatus === 'reuniao' && <span className="text-rose-600 bg-rose-50 px-2.5 py-0.5 rounded-lg border border-rose-100">⏱️ Em Reunião</span>}
               </div>
             </div>
 

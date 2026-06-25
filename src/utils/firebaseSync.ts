@@ -16,7 +16,9 @@ import {
   CartinhaItem, 
   ConversaRoom, 
   ConteudoFile,
-  ChatMessage
+  ChatMessage,
+  JoaoStatus,
+  TimezoneAlarm
 } from '../types';
 
 /**
@@ -184,9 +186,40 @@ export async function deleteConteudoFileDb(id: string) {
   }
 }
 
+// 7. JoaoStatus CRUD
+export async function updateJoaoStatusDb(statusVal: JoaoStatus['status']) {
+  try {
+    const statusObj: JoaoStatus = {
+      id: 'current',
+      status: statusVal,
+      lastUpdated: new Date().toISOString()
+    };
+    await setDoc(doc(db, 'status_joao', 'current'), statusObj);
+  } catch (error) {
+    handleFirestoreError(error, OperationType.WRITE, 'status_joao/current');
+  }
+}
+
+// 8. TimezoneAlarms CRUD
+export async function addTimezoneAlarmDb(alarm: TimezoneAlarm) {
+  try {
+    await setDoc(doc(db, 'fuso_horario_alarmes', alarm.id), alarm);
+  } catch (error) {
+    handleFirestoreError(error, OperationType.WRITE, `fuso_horario_alarmes/${alarm.id}`);
+  }
+}
+
+export async function deleteTimezoneAlarmDb(id: string) {
+  try {
+    await deleteDoc(doc(db, 'fuso_horario_alarmes', id));
+  } catch (error) {
+    handleFirestoreError(error, OperationType.DELETE, `fuso_horario_alarmes/${id}`);
+  }
+}
+
 export async function resetDatabaseDb() {
   try {
-    const collections = ['agenda', 'recados', 'memorias', 'cartinhas', 'conteudos'];
+    const collections = ['agenda', 'recados', 'memorias', 'cartinhas', 'conteudos', 'status_joao', 'fuso_horario_alarmes'];
     
     // Delete flat collections
     for (const colName of collections) {

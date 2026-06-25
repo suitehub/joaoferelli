@@ -16,6 +16,8 @@ import { MemoriasPanel } from './components/MemoriasPanel';
 import { CartinhasPanel } from './components/CartinhasPanel';
 import { ConversasPanel } from './components/ConversasPanel';
 import { ConteudosPanel } from './components/ConteudosPanel';
+import { TimezonePanel } from './components/TimezonePanel';
+import { PWAInstallBanner } from './components/PWAInstallBanner';
 
 import { auth, db, handleFirestoreError, OperationType } from './firebase';
 
@@ -26,7 +28,9 @@ import {
   CartinhaItem, 
   ConversaRoom, 
   ConteudoFile,
-  ChatMessage
+  ChatMessage,
+  TimezoneAlarm,
+  JoaoStatus
 } from './types';
 
 import {
@@ -48,7 +52,10 @@ import {
   deleteConversaRoomDb,
   addChatMessageDb,
   addConteudoFileDb,
-  deleteConteudoFileDb
+  deleteConteudoFileDb,
+  updateJoaoStatusDb,
+  addTimezoneAlarmDb,
+  deleteTimezoneAlarmDb
 } from './utils/firebaseSync';
 
 export default function App() {
@@ -94,6 +101,16 @@ export default function App() {
 
   const [conteudos, setConteudos] = useState<ConteudoFile[]>(() => {
     const saved = localStorage.getItem('joao_conteudos');
+    return saved ? JSON.parse(saved) : [];
+  });
+
+  const [joaoStatus, setJoaoStatus] = useState<JoaoStatus['status']>(() => {
+    const saved = localStorage.getItem('joao_status');
+    return (saved as JoaoStatus['status']) || 'acordado';
+  });
+
+  const [timezoneAlarms, setTimezoneAlarms] = useState<TimezoneAlarm[]>(() => {
+    const saved = localStorage.getItem('joao_timezone_alarms');
     return saved ? JSON.parse(saved) : [];
   });
 
@@ -188,12 +205,41 @@ export default function App() {
       console.error('Error listening to conteudos:', err);
     });
 
+    const unsubStatus = onSnapshot(doc(db, 'status_joao', 'current'), (docSnap) => {
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        const statusVal = data.status || 'acordado';
+        setJoaoStatus(statusVal);
+        localStorage.setItem('joao_status', statusVal);
+      } else {
+        setJoaoStatus('acordado');
+        localStorage.setItem('joao_status', 'acordado');
+      }
+    }, (err) => {
+      console.error('Error listening to joao status:', err);
+    });
+
+    const unsubAlarms = onSnapshot(collection(db, 'fuso_horario_alarmes'), (snap) => {
+      const items: TimezoneAlarm[] = [];
+      snap.forEach(doc => {
+        items.push(doc.data() as TimezoneAlarm);
+      });
+      // Sort newest first
+      items.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+      setTimezoneAlarms(items);
+      localStorage.setItem('joao_timezone_alarms', JSON.stringify(items));
+    }, (err) => {
+      console.error('Error listening to timezone alarms:', err);
+    });
+
     return () => {
       unsubAgenda();
       unsubRecados();
       unsubMemorias();
       unsubCartinhas();
       unsubConteudos();
+      unsubStatus();
+      unsubAlarms();
     };
   }, [authReady]);
 
@@ -510,6 +556,31 @@ export default function App() {
     deleteConteudoFileDb(id);
   };
 
+  // 7. Joao Status and Timezone Alarms Actions
+  const handleUpdateStatus = async (newStatus: JoaoStatus['status']) => {
+    setJoaoStatus(newStatus);
+    localStorage.setItem('joao_status', newStatus);
+    await updateJoaoStatusDb(newStatus);
+  };
+
+  const handleAddTimezoneAlarm = async (alarmData: Omit<TimezoneAlarm, 'id' | 'createdAt'>) => {
+    const newAlarm: TimezoneAlarm = {
+      ...alarmData,
+      id: `alarm-${Date.now()}`,
+      createdAt: new Date().toISOString()
+    };
+    setTimezoneAlarms(prev => [newAlarm, ...prev]);
+    localStorage.setItem('joao_timezone_alarms', JSON.stringify([newAlarm, ...timezoneAlarms]));
+    await addTimezoneAlarmDb(newAlarm);
+  };
+
+  const handleDeleteTimezoneAlarm = async (id: string) => {
+    const filtered = timezoneAlarms.filter(a => a.id !== id);
+    setTimezoneAlarms(filtered);
+    localStorage.setItem('joao_timezone_alarms', JSON.stringify(filtered));
+    await deleteTimezoneAlarmDb(id);
+  };
+
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col font-sans select-none antialiased">
@@ -539,7 +610,7 @@ export default function App() {
                 <div className="absolute -inset-2 bg-gradient-to-tr from-blue-600 via-indigo-500 to-emerald-500 rounded-full blur-sm opacity-80 animate-pulse" style={{ animationDuration: '3s' }} />
                 <div className="relative w-32 h-32 rounded-full bg-slate-900 border-4 border-slate-950 shadow-2xl overflow-hidden flex items-center justify-center">
                   <img 
-                    src="./logojoao.png" 
+                    src="/logojoao.png" 
                     alt="Cabeça do João" 
                     className="w-full h-full object-cover"
                     onError={(e) => {
@@ -619,6 +690,10 @@ export default function App() {
             cartinhas={cartinhas}
             conversas={conversas}
             conteudos={conteudos}
+            timezoneAlarms={timezoneAlarms}
+            joaoStatus={joaoStatus}
+            onUpdateStatus={handleUpdateStatus}
+            isGuestMode={isGuestMode}
           />
         ) : (
           <div className="animate-fade-in">
@@ -672,6 +747,7 @@ export default function App() {
                 guestName={guestName}
                 onSetGuestName={setGuestName}
                 onDeleteRoom={handleDeleteRoom}
+                joaoStatus={joaoStatus}
               />
             )}
 
@@ -682,6 +758,14 @@ export default function App() {
                 onDeleteFile={handleDeleteFile}
               />
             )}
+
+            {activePanelId === 'fuso-horario' && (
+              <TimezonePanel 
+                alarms={timezoneAlarms}
+                onAddAlarm={handleAddTimezoneAlarm}
+                onDeleteAlarm={handleDeleteTimezoneAlarm}
+              />
+            )}
           </div>
         )}
       </main>
@@ -689,8 +773,10 @@ export default function App() {
       {/* Tiny clean footer credit */}
       <footer className="py-6 text-center text-[10px] text-slate-400 font-mono border-t border-slate-100 bg-white shrink-0 flex flex-col items-center gap-2">
         <div>Cabeça do João — Segundo Cérebro Digital © {new Date().getFullYear()}</div>
-        <div className="text-slate-300">Construído em React com Inteligência Artificial Gemini</div>
       </footer>
+
+      {/* PWA Install Banner and interactive Help modal */}
+      <PWAInstallBanner />
 
     </div>
   );

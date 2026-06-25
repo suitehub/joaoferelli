@@ -31,6 +31,7 @@ export const Header: React.FC<HeaderProps> = ({
       case 'cartinhas': return 'Cartinhas no Tempo';
       case 'conversas': return 'Canais de Conversa';
       case 'conteudos': return 'Biblioteca de Conteúdos';
+      case 'fuso-horario': return 'Fuso Horário & Alarmes';
       default: return panel.charAt(0).toUpperCase() + panel.slice(1);
     }
   };
@@ -49,7 +50,7 @@ export const Header: React.FC<HeaderProps> = ({
             {!isGuestMode && <div className="absolute -inset-1 bg-gradient-to-tr from-blue-600 via-indigo-500 to-emerald-500 rounded-full blur-xs opacity-75 group-hover:opacity-100 group-hover:scale-105 transition-all duration-300 animate-pulse" style={{ animationDuration: '4s' }}></div>}
             <div className={`relative w-12 h-12 md:w-16 md:h-16 rounded-full bg-slate-900 border-2 border-white shadow-md overflow-hidden flex items-center justify-center`}>
               <img 
-                src="./logojoao.png" 
+                src="/logojoao.png" 
                 alt="Cabeça do João" 
                 className={`w-full h-full object-cover ${!isGuestMode ? 'group-hover:scale-110 transition-transform duration-500' : ''}`}
                 onError={(e) => {

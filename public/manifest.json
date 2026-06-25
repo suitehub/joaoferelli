@@ -3,6 +3,7 @@
   "short_name": "Cabeça do João",
   "description": "Segundo Cérebro Digital do João - Organização e Compartilhamento",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
   "background_color": "#FAF9F5",
   "theme_color": "#e11d48",
