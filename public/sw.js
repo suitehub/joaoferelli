@@ -1,9 +1,9 @@
 const CACHE_NAME = 'cabeca-do-joao-v1';
 const ASSETS = [
-  './',
-  './index.html',
-  './logojoao.png',
-  './manifest.json'
+  '/',
+  '/index.html',
+  '/logojoao.png',
+  '/manifest.json'
 ];
 
 self.addEventListener('install', (e) => {

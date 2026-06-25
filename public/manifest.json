@@ -2,30 +2,29 @@
   "name": "Cabeça do João",
   "short_name": "Cabeça do João",
   "description": "Segundo Cérebro Digital do João - Organização e Compartilhamento",
-  "start_url": "./",
-  "scope": "./",
+  "start_url": "/",
   "display": "standalone",
   "background_color": "#FAF9F5",
   "theme_color": "#e11d48",
   "icons": [
     {
-      "src": "./logojoao.png",
+      "src": "/logojoao.png",
       "sizes": "192x192",
       "type": "image/png"
     },
     {
-      "src": "./logojoao.png",
+      "src": "/logojoao.png",
       "sizes": "512x512",
       "type": "image/png"
     },
     {
-      "src": "./logojoao.png",
+      "src": "/logojoao.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "./logojoao.png",
+      "src": "/logojoao.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"

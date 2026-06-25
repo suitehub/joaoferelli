@@ -17,7 +17,6 @@ import { CartinhasPanel } from './components/CartinhasPanel';
 import { ConversasPanel } from './components/ConversasPanel';
 import { ConteudosPanel } from './components/ConteudosPanel';
 import { TimezonePanel } from './components/TimezonePanel';
-import { PWAInstallBanner } from './components/PWAInstallBanner';
 
 import { auth, db, handleFirestoreError, OperationType } from './firebase';
 
@@ -774,9 +773,6 @@ export default function App() {
       <footer className="py-6 text-center text-[10px] text-slate-400 font-mono border-t border-slate-100 bg-white shrink-0 flex flex-col items-center gap-2">
         <div>Cabeça do João — Segundo Cérebro Digital © {new Date().getFullYear()}</div>
       </footer>
-
-      {/* PWA Install Banner and interactive Help modal */}
-      <PWAInstallBanner />
 
     </div>
   );
