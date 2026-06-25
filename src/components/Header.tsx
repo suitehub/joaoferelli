@@ -11,6 +11,7 @@ interface HeaderProps {
   onTabChange: (tab: 'meu-mundo' | 'compartilhado') => void;
   activePanel: string | null;
   onBack: () => void;
+  isGuestMode?: boolean;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -18,6 +19,7 @@ export const Header: React.FC<HeaderProps> = ({
   onTabChange,
   activePanel,
   onBack,
+  isGuestMode = false,
 }) => {
   // Map panel keys to friendly display names in Portuguese
   const getPanelDisplayName = (panel: string | null) => {
@@ -39,17 +41,17 @@ export const Header: React.FC<HeaderProps> = ({
         
         {/* Brand Logo & Name (Enlarged and highlighted) */}
         <div 
-          onClick={onBack}
-          className="flex items-center gap-3 md:gap-4 cursor-pointer group select-none min-w-0"
+          onClick={isGuestMode ? undefined : onBack}
+          className={`flex items-center gap-3 md:gap-4 select-none min-w-0 ${isGuestMode ? 'cursor-default' : 'cursor-pointer group'}`}
         >
           <div className="relative shrink-0">
             {/* Glowing outer ring to showcase active brain state */}
-            <div className="absolute -inset-1 bg-gradient-to-tr from-blue-600 via-indigo-500 to-emerald-500 rounded-full blur-xs opacity-75 group-hover:opacity-100 group-hover:scale-105 transition-all duration-300 animate-pulse" style={{ animationDuration: '4s' }}></div>
-            <div className="relative w-12 h-12 md:w-16 md:h-16 rounded-full bg-slate-900 border-2 border-white shadow-md overflow-hidden flex items-center justify-center">
+            {!isGuestMode && <div className="absolute -inset-1 bg-gradient-to-tr from-blue-600 via-indigo-500 to-emerald-500 rounded-full blur-xs opacity-75 group-hover:opacity-100 group-hover:scale-105 transition-all duration-300 animate-pulse" style={{ animationDuration: '4s' }}></div>}
+            <div className={`relative w-12 h-12 md:w-16 md:h-16 rounded-full bg-slate-900 border-2 border-white shadow-md overflow-hidden flex items-center justify-center`}>
               <img 
                 src="./logojoao.png" 
                 alt="Cabeça do João" 
-                className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                className={`w-full h-full object-cover ${!isGuestMode ? 'group-hover:scale-110 transition-transform duration-500' : ''}`}
                 onError={(e) => {
                   // Fallback to stylized initials if image not found
                   e.currentTarget.style.display = 'none';
@@ -79,7 +81,7 @@ export const Header: React.FC<HeaderProps> = ({
                 <>
                   <span className="text-blue-500 font-semibold truncate">{getPanelDisplayName(activePanel)}</span>
                   <span className="text-slate-300 shrink-0">•</span>
-                  <span className="shrink-0">Mente Ativa</span>
+                  <span className="shrink-0">{isGuestMode ? 'Convidado' : 'Mente Ativa'}</span>
                 </>
               ) : (
                 'Segundo Cérebro Digital'
@@ -90,7 +92,12 @@ export const Header: React.FC<HeaderProps> = ({
 
         {/* Action/Selector Controls */}
         <div className="shrink-0 flex items-center">
-          {!activePanel ? (
+          {isGuestMode ? (
+            <div className="flex items-center gap-1.5 bg-rose-50 border border-rose-100/50 text-rose-600 px-3 py-2 rounded-xl text-[10px] font-bold tracking-wider font-mono">
+              <span className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse" />
+              CONVERSA PRIVADA
+            </div>
+          ) : !activePanel ? (
             <div className="bg-slate-100 p-1 rounded-xl flex items-center gap-0.5 select-none shadow-3xs">
               <button
                 onClick={() => onTabChange('meu-mundo')}

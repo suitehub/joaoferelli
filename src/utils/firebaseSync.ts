@@ -247,6 +247,14 @@ export async function addConversaRoomDb(room: Omit<ConversaRoom, 'messages'>) {
   }
 }
 
+export async function deleteConversaRoomDb(id: string) {
+  try {
+    await deleteDoc(doc(db, 'conversas', id));
+  } catch (error) {
+    handleFirestoreError(error, OperationType.DELETE, `conversas/${id}`);
+  }
+}
+
 export async function addChatMessageDb(roomId: string, message: ChatMessage) {
   try {
     await setDoc(doc(db, 'conversas', roomId, 'messages', message.id), message);

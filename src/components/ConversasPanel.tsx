@@ -17,7 +17,8 @@ import {
   ChevronLeft, 
   Info,
   Sparkles,
-  Lock
+  Lock,
+  Trash2
 } from 'lucide-react';
 import { ConversaRoom, ChatMessage } from '../types';
 
@@ -30,6 +31,7 @@ interface ConversasPanelProps {
   isGuestMode?: boolean;
   guestName?: string;
   onSetGuestName?: (name: string) => void;
+  onDeleteRoom?: (roomId: string) => void;
 }
 
 export const ConversasPanel: React.FC<ConversasPanelProps> = ({
@@ -41,6 +43,7 @@ export const ConversasPanel: React.FC<ConversasPanelProps> = ({
   isGuestMode = false,
   guestName = '',
   onSetGuestName,
+  onDeleteRoom,
 }) => {
   const [copied, setCopied] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
@@ -183,7 +186,7 @@ export const ConversasPanel: React.FC<ConversasPanelProps> = ({
                   <div
                     key={room.id}
                     onClick={() => onSelectRoom(room.id)}
-                    className={`flex items-center gap-3 p-3 rounded-2xl cursor-pointer transition-all ${
+                    className={`flex items-center gap-3 p-3 rounded-2xl cursor-pointer transition-all relative group ${
                       isSelected 
                         ? 'bg-rose-50 text-rose-950 border border-rose-100/30 shadow-2xs' 
                         : 'hover:bg-slate-100 text-slate-700'
@@ -192,7 +195,7 @@ export const ConversasPanel: React.FC<ConversasPanelProps> = ({
                     <div className={`w-10 h-10 rounded-full ${room.avatarColor} text-white flex items-center justify-center font-bold shadow-2xs text-sm shrink-0 uppercase`}>
                       {room.name.substring(0, 2)}
                     </div>
-                    <div className="flex-1 overflow-hidden">
+                    <div className="flex-1 overflow-hidden pr-6">
                       <div className="flex justify-between items-baseline">
                         <h4 className="font-display font-bold text-xs truncate">{room.name}</h4>
                         {lastMsg && <span className="text-[9px] font-mono text-slate-400">{lastMsg.timestamp}</span>}
@@ -201,6 +204,20 @@ export const ConversasPanel: React.FC<ConversasPanelProps> = ({
                         {lastMsg ? `${lastMsg.senderName}: ${lastMsg.text}` : room.description}
                       </p>
                     </div>
+
+                    {/* Delete room icon button */}
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (confirm(`Tem certeza que deseja excluir o canal de conversa "${room.name}" e todas as suas mensagens?`)) {
+                          onDeleteRoom?.(room.id);
+                        }
+                      }}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 text-slate-400 hover:text-red-500 rounded-lg hover:bg-slate-200/50 opacity-0 group-hover:opacity-100 transition-all cursor-pointer"
+                      title="Excluir canal"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
                   </div>
                 );
               })}
@@ -242,6 +259,21 @@ export const ConversasPanel: React.FC<ConversasPanelProps> = ({
                   {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
                   <span>{copied ? 'Copiado!' : 'Copiar Link'}</span>
                 </button>
+
+                {!isGuestMode && (
+                  <button
+                    onClick={() => {
+                      if (confirm(`Tem certeza que deseja excluir o canal de conversa "${activeRoom.name}" e todas as suas mensagens?`)) {
+                        onDeleteRoom?.(activeRoom.id);
+                      }
+                    }}
+                    className="flex items-center gap-1 text-[10px] font-semibold bg-red-50 text-red-600 px-3 py-1.5 rounded-lg border border-red-100/40 cursor-pointer hover:bg-red-100 transition-colors"
+                    title="Excluir este canal de conversa"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                    <span>Excluir</span>
+                  </button>
+                )}
               </div>
             </div>
 

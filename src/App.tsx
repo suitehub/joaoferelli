@@ -45,6 +45,7 @@ import {
   updateCartinhaItemDb,
   deleteCartinhaItemDb,
   addConversaRoomDb,
+  deleteConversaRoomDb,
   addChatMessageDb,
   addConteudoFileDb,
   deleteConteudoFileDb
@@ -477,6 +478,13 @@ export default function App() {
     setActiveRoomId(room.id);
   };
 
+  const handleDeleteRoom = (roomId: string) => {
+    deleteConversaRoomDb(roomId);
+    if (activeRoomId === roomId) {
+      setActiveRoomId(null);
+    }
+  };
+
   const handleSendMessage = (roomId: string, text: string, sender: 'owner' | 'guest', senderName: string) => {
     const newMessage: ChatMessage = {
       id: `msg-${Date.now()}`,
@@ -596,6 +604,7 @@ export default function App() {
           window.location.hash = '';
         }}
         onBack={() => handleSelectPanel(null)}
+        isGuestMode={isGuestMode}
       />
 
       {/* Main app viewport content */}
@@ -662,6 +671,7 @@ export default function App() {
                 isGuestMode={isGuestMode}
                 guestName={guestName}
                 onSetGuestName={setGuestName}
+                onDeleteRoom={handleDeleteRoom}
               />
             )}
 
