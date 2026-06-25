@@ -610,7 +610,7 @@ export default function App() {
                 <div className="absolute -inset-2 bg-gradient-to-tr from-blue-600 via-indigo-500 to-emerald-500 rounded-full blur-sm opacity-80 animate-pulse" style={{ animationDuration: '3s' }} />
                 <div className="relative w-32 h-32 rounded-full bg-slate-900 border-4 border-slate-950 shadow-2xl overflow-hidden flex items-center justify-center">
                   <img 
-                    src="/logojoao.png" 
+                    src="./logojoao.png" 
                     alt="Cabeça do João" 
                     className="w-full h-full object-cover"
                     onError={(e) => {
