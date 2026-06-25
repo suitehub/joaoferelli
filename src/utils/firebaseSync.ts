@@ -10,14 +10,6 @@ import {
 } from 'firebase/firestore';
 import { db, handleFirestoreError, OperationType } from '../firebase';
 import { 
-  initialAgenda, 
-  initialRecados, 
-  initialMemorias, 
-  initialCartinhas, 
-  initialConversas, 
-  initialConteudos 
-} from '../data/initialData';
-import { 
   AgendaItem, 
   RecadoItem, 
   MemoriaItem, 
@@ -42,98 +34,10 @@ export async function testConnection() {
 
 /**
  * Seeds the database if collections are currently empty.
+ * Set to a no-op as the user requested a completely empty/clean production database.
  */
 export async function seedDatabaseIfEmpty() {
-  try {
-    // 1. Seed Agenda
-    const agendaSnap = await getDocs(collection(db, 'agenda'));
-    if (agendaSnap.empty) {
-      console.log('Seeding agenda items...');
-      const batch = writeBatch(db);
-      initialAgenda.forEach(item => {
-        const d = doc(db, 'agenda', item.id);
-        batch.set(d, item);
-      });
-      await batch.commit();
-    }
-
-    // 2. Seed Recados
-    const recadosSnap = await getDocs(collection(db, 'recados'));
-    if (recadosSnap.empty) {
-      console.log('Seeding recados...');
-      const batch = writeBatch(db);
-      initialRecados.forEach(item => {
-        const d = doc(db, 'recados', item.id);
-        batch.set(d, item);
-      });
-      await batch.commit();
-    }
-
-    // 3. Seed Memorias
-    const memoriasSnap = await getDocs(collection(db, 'memorias'));
-    if (memoriasSnap.empty) {
-      console.log('Seeding memorias...');
-      const batch = writeBatch(db);
-      initialMemorias.forEach(item => {
-        const d = doc(db, 'memorias', item.id);
-        batch.set(d, item);
-      });
-      await batch.commit();
-    }
-
-    // 4. Seed Cartinhas
-    const cartinhasSnap = await getDocs(collection(db, 'cartinhas'));
-    if (cartinhasSnap.empty) {
-      console.log('Seeding cartinhas...');
-      const batch = writeBatch(db);
-      initialCartinhas.forEach(item => {
-        const d = doc(db, 'cartinhas', item.id);
-        batch.set(d, item);
-      });
-      await batch.commit();
-    }
-
-    // 5. Seed Conversas & Subcollection Messages
-    const conversasSnap = await getDocs(collection(db, 'conversas'));
-    if (conversasSnap.empty) {
-      console.log('Seeding conversas rooms and messages subcollections...');
-      for (const room of initialConversas) {
-        // Create room doc without messages list (since it's unbounded)
-        const roomDocRef = doc(db, 'conversas', room.id);
-        const roomMetadata = {
-          id: room.id,
-          name: room.name,
-          avatarColor: room.avatarColor,
-          description: room.description,
-          createdAt: room.createdAt,
-          ...(room.personaPrompt ? { personaPrompt: room.personaPrompt } : {})
-        };
-        await setDoc(roomDocRef, roomMetadata);
-
-        // Seed messages inside subcollection
-        const messageBatch = writeBatch(db);
-        room.messages.forEach(msg => {
-          const mDocRef = doc(db, 'conversas', room.id, 'messages', msg.id);
-          messageBatch.set(mDocRef, msg);
-        });
-        await messageBatch.commit();
-      }
-    }
-
-    // 6. Seed Conteudos (Biblioteca)
-    const conteudosSnap = await getDocs(collection(db, 'conteudos'));
-    if (conteudosSnap.empty) {
-      console.log('Seeding conteudos...');
-      const batch = writeBatch(db);
-      initialConteudos.forEach(item => {
-        const d = doc(db, 'conteudos', item.id);
-        batch.set(d, item);
-      });
-      await batch.commit();
-    }
-  } catch (error) {
-    handleFirestoreError(error, OperationType.WRITE, 'seeding');
-  }
+  console.log('Database seeding is disabled. Application starts with empty collections.');
 }
 
 // --- Wrapper CRUD Functions for Firestore ---
