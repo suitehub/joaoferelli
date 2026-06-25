@@ -1,4 +1,6 @@
 {
+  "id": "/",
+  "scope": "/",
   "name": "Cabeça do João",
   "short_name": "Cabeça do João",
   "description": "Segundo Cérebro Digital do João - Organização e Compartilhamento",
@@ -10,18 +12,20 @@
     {
       "src": "/logojoao.png",
       "sizes": "192x192",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any"
     },
     {
       "src": "/logojoao.png",
       "sizes": "512x512",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any"
     },
     {
       "src": "/logojoao.png",
       "sizes": "192x192",
       "type": "image/png",
-      "purpose": "any"
+      "purpose": "maskable"
     },
     {
       "src": "/logojoao.png",
