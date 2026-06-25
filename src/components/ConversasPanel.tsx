@@ -49,12 +49,10 @@ export const ConversasPanel: React.FC<ConversasPanelProps> = ({
   // Room Form
   const [roomName, setRoomName] = useState('');
   const [roomDesc, setRoomDesc] = useState('');
-  const [roomPrompt, setRoomPrompt] = useState('');
   const [roomAvatar, setRoomAvatar] = useState('bg-blue-500');
 
   // Input message
   const [typedMessage, setTypedMessage] = useState('');
-  const [isTypingSimulated, setIsTypingSimulated] = useState(false);
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -64,7 +62,7 @@ export const ConversasPanel: React.FC<ConversasPanelProps> = ({
   // Auto-scroll to bottom of chats
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [activeRoom?.messages, isTypingSimulated]);
+  }, [activeRoom?.messages]);
 
   const handleCopyLink = () => {
     if (!activeRoom) return;
@@ -94,102 +92,12 @@ export const ConversasPanel: React.FC<ConversasPanelProps> = ({
       id: slug || `chat-${Date.now()}`,
       name: roomName,
       description: roomDesc,
-      avatarColor: randomAvatar,
-      personaPrompt: roomPrompt || undefined
+      avatarColor: randomAvatar
     });
 
     setRoomName('');
     setRoomDesc('');
-    setRoomPrompt('');
     setIsCreating(false);
-  };
-
-  // Automated responses (Complies with Server-side AI + local fallback smart responses)
-  const triggerAutoReply = async (roomId: string, userText: string) => {
-    setIsTypingSimulated(true);
-
-    // Call server API for intelligent response or fallback locally
-    try {
-      const response = await fetch('/api/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          message: userText,
-          roomId: roomId,
-          history: activeRoom?.messages.slice(-6).map(m => ({
-            role: m.sender === 'owner' ? 'user' : 'model',
-            parts: [{ text: m.text }]
-          })) || []
-        })
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        // Mimic natural typing delay
-        setTimeout(() => {
-          setIsTypingSimulated(false);
-          const replySenderName = activeRoomId === 'familia' ? 'Mãe' : activeRoomId === 'estudos' ? 'Mateus' : (activeRoom?.name || '').replace(/[^a-zA-ZÀ-ÿ\s]/g, '').trim() || 'Companion';
-          onSendMessage(roomId, data.reply, 'guest', replySenderName);
-        }, 1200);
-        return;
-      }
-    } catch (err) {
-      console.log('API call unavailable, using local smart responder:', err);
-    }
-
-    // LOCAL SMART RESPONDER FALLBACK (extremely realistic, in Portuguese)
-    setTimeout(() => {
-      setIsTypingSimulated(false);
-      let replyText = 'Que legal! Me conta mais sobre isso.';
-      let replyName = 'Mãe';
-
-      const lowerText = userText.toLowerCase();
-
-      if (roomId === 'familia') {
-        const isDad = Math.random() > 0.5;
-        if (isDad) {
-          replyName = 'Pai';
-          replyText = lowerText.includes('olá') || lowerText.includes('oi') 
-            ? 'Oi filho, tudo bem? Deus te abençoe! 👍'
-            : 'Muito bom, filho. Orgulho de você! 👍';
-        } else {
-          replyName = 'Mãe';
-          if (lowerText.includes('jantar') || lowerText.includes('comer') || lowerText.includes('lasanha')) {
-            replyText = 'Ai que ótimo, filho! Já vou comprar os ingredientes da lasanha. Lembra de trazer sua namorada também se ela puder! Beijos ❤️';
-          } else if (lowerText.includes('oi') || lowerText.includes('olá')) {
-            replyText = 'Oi meu lindo! Tudo bem? Como está seu dia? Não esquece de comer direito, viu? 😘';
-          } else {
-            replyText = 'Glória a Deus, filho! Estou orando por você hoje. Se precisar de alguma coisa me avisa! 🌸';
-          }
-        }
-      } else if (roomId === 'kimberly') {
-        replyName = 'Kimberly';
-        if (lowerText.includes('te amo') || lowerText.includes('amo você')) {
-          replyText = 'Ah meu amor! Eu também te amo infinitamente! Obrigada por me fazer tão feliz ❤️';
-        } else if (lowerText.includes('oi') || lowerText.includes('olá') || lowerText.includes('linda')) {
-          replyText = 'Oi meu lindo! Que bom falar com você. Como está sendo seu dia de trabalho por aí?';
-        } else if (lowerText.includes('sermão') || lowerText.includes('esboço') || lowerText.includes('estudo')) {
-          replyText = 'Nossa, que assunto lindo! Você fala com tanta sabedoria sobre isso, tenho certeza que vai tocar muitos corações no Domingo! Quer que eu leia quando estiver pronto?';
-        } else {
-          replyText = 'Que fofo, meu amor! Estou aqui na torcida por você. Mal posso esperar para o final de semana para nos vermos 🥰';
-        }
-      } else if (roomId === 'estudos') {
-        const isClara = Math.random() > 0.5;
-        if (isClara) {
-          replyName = 'Clara';
-          replyText = 'Concordo plenamente! Essa aplicação prática muda totalmente a forma como vivemos nossa fé no dia a dia. Obrigado por compartilhar!';
-        } else {
-          replyName = 'Mateus';
-          replyText = 'Incrível! Fui pesquisar aqui e no grego original o termo traz essa conotação de aliança eterna. Vale a pena explorarmos isso na próxima aula.';
-        }
-      } else {
-        // Custom created room response
-        replyName = activeRoom?.name || 'Amigo';
-        replyText = `Recebi sua mensagem! "${userText.substring(0, 15)}..." faz muito sentido dentro do nosso contexto. Vamos conversando! ✨`;
-      }
-
-      onSendMessage(roomId, replyText, 'guest', replyName);
-    }, 1800);
   };
 
   const handleSend = (e: React.FormEvent) => {
@@ -202,11 +110,6 @@ export const ConversasPanel: React.FC<ConversasPanelProps> = ({
 
     onSendMessage(activeRoomId, messageText, currentSenderType, currentSenderName);
     setTypedMessage('');
-
-    // If owner wrote the message, trigger AI/simulated response after a delay
-    if (!isGuestMode) {
-      triggerAutoReply(activeRoomId, messageText);
-    }
   };
 
   // Guest name prompt screen
@@ -352,11 +255,11 @@ export const ConversasPanel: React.FC<ConversasPanelProps> = ({
               </p>
             </div>
 
-            {/* MESSAGES VIEW GRID */}
+              {/* MESSAGES VIEW GRID */}
             <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-[#FAF9F5]">
               {activeRoom.messages.map(msg => {
                 const isMyMessage = isGuestMode 
-                  ? msg.sender === 'guest' 
+                  ? (msg.sender === 'guest' && msg.senderName === guestName) 
                   : msg.sender === 'owner';
 
                 return (
@@ -386,20 +289,6 @@ export const ConversasPanel: React.FC<ConversasPanelProps> = ({
                   </div>
                 );
               })}
-
-              {/* Real-time looking typing indicator */}
-              {isTypingSimulated && (
-                <div className="mr-auto bg-white border border-slate-100 text-slate-800 rounded-2xl rounded-bl-none px-4 py-2.5 shadow-3xs max-w-[75%]">
-                  <span className="font-semibold text-[9px] text-rose-500 block mb-1">
-                    {activeRoomId === 'familia' ? 'Mãe' : activeRoomId === 'estudos' ? 'Mateus' : (activeRoom?.name || '').replace(/[^a-zA-ZÀ-ÿ\s]/g, '').trim()} está digitando...
-                  </span>
-                  <div className="flex gap-1 items-center h-2">
-                    <span className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></span>
-                    <span className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></span>
-                    <span className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></span>
-                  </div>
-                </div>
-              )}
 
               <div ref={messagesEndRef} />
             </div>
@@ -462,17 +351,6 @@ export const ConversasPanel: React.FC<ConversasPanelProps> = ({
                   value={roomDesc}
                   onChange={(e) => setRoomDesc(e.target.value)}
                   className="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl p-2.5 focus:outline-hidden focus:border-rose-500 text-slate-700"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-500 mb-1">Instruções de Personalidade (IA)</label>
-                <textarea
-                  placeholder="Defina as características de quem responderá João por IA neste canal..."
-                  value={roomPrompt}
-                  onChange={(e) => setRoomPrompt(e.target.value)}
-                  rows={3}
-                  className="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl p-2.5 focus:outline-hidden focus:border-rose-500 text-slate-700 leading-normal"
                 />
               </div>
 

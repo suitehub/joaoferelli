@@ -6,7 +6,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { signInAnonymously } from 'firebase/auth';
-import { collection, onSnapshot, query, orderBy } from 'firebase/firestore';
+import { collection, onSnapshot, query, orderBy, doc } from 'firebase/firestore';
 
 import { Header } from './components/Header';
 import { Dashboard } from './components/Dashboard';
@@ -187,44 +187,87 @@ export default function App() {
       console.error('Error listening to conteudos:', err);
     });
 
-    const unsubConversas = onSnapshot(collection(db, 'conversas'), (snap) => {
-      const items: ConversaRoom[] = [];
-      snap.forEach(doc => {
-        const roomData = doc.data();
-        items.push({
-          id: doc.id,
-          name: roomData.name || '',
-          avatarColor: roomData.avatarColor || '',
-          description: roomData.description || '',
-          createdAt: roomData.createdAt || '',
-          personaPrompt: roomData.personaPrompt,
-          messages: [] // Loaded separately via activeRoom messages subcollection listener
-        } as ConversaRoom);
-      });
-      setConversas(prev => {
-        const merged = items.map(room => {
-          const oldRoom = prev.find(r => r.id === room.id);
-          return {
-            ...room,
-            messages: oldRoom ? oldRoom.messages : []
-          };
-        });
-        localStorage.setItem('joao_conversas', JSON.stringify(merged));
-        return merged;
-      });
-    }, (err) => {
-      console.error('Error listening to conversas:', err);
-    });
-
     return () => {
       unsubAgenda();
       unsubRecados();
       unsubMemorias();
       unsubCartinhas();
       unsubConteudos();
-      unsubConversas();
     };
   }, [authReady]);
+
+  // Real-Time Conversas (Rooms) Listener (Enforces guest mode privacy restriction)
+  useEffect(() => {
+    if (!authReady) return;
+
+    if (isGuestMode) {
+      if (!activeRoomId) return;
+      // In Guest Mode, only subscribe to the single room they have a link for
+      const roomDocRef = doc(db, 'conversas', activeRoomId);
+      const unsubSingleRoom = onSnapshot(roomDocRef, (docSnap) => {
+        if (docSnap.exists()) {
+          const roomData = docSnap.data();
+          const singleRoom: ConversaRoom = {
+            id: docSnap.id,
+            name: roomData.name || '',
+            avatarColor: roomData.avatarColor || '',
+            description: roomData.description || '',
+            createdAt: roomData.createdAt || '',
+            personaPrompt: roomData.personaPrompt,
+            messages: []
+          };
+          
+          setConversas(prev => {
+            const oldRoom = prev.find(r => r.id === singleRoom.id);
+            const updatedSingle = {
+              ...singleRoom,
+              messages: oldRoom ? oldRoom.messages : []
+            };
+            const merged = [updatedSingle]; // Guest only gets to see/interact with this active room
+            localStorage.setItem('joao_conversas', JSON.stringify(merged));
+            return merged;
+          });
+        }
+      }, (err) => {
+        console.error(`Error listening to single room ${activeRoomId}:`, err);
+      });
+
+      return () => unsubSingleRoom();
+    } else {
+      // In Owner Mode, listen to all rooms
+      const unsubConversas = onSnapshot(collection(db, 'conversas'), (snap) => {
+        const items: ConversaRoom[] = [];
+        snap.forEach(doc => {
+          const roomData = doc.data();
+          items.push({
+            id: doc.id,
+            name: roomData.name || '',
+            avatarColor: roomData.avatarColor || '',
+            description: roomData.description || '',
+            createdAt: roomData.createdAt || '',
+            personaPrompt: roomData.personaPrompt,
+            messages: []
+          } as ConversaRoom);
+        });
+
+        setConversas(prev => {
+          const merged = items.map(room => {
+            const oldRoom = prev.find(r => r.id === room.id);
+            return {
+              ...room,
+              messages: oldRoom ? oldRoom.messages : []
+            };
+          });
+          localStorage.setItem('joao_conversas', JSON.stringify(merged));
+          return merged;
+        });
+      }, (err) => {
+        console.error('Error listening to conversas:', err);
+      });
+
+      return () => unsubConversas();
+    }
+  }, [authReady, isGuestMode, activeRoomId]);
 
   // Real-Time Subcollection Messages Listener for Active Chat Room
   useEffect(() => {
