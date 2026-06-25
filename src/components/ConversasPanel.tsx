@@ -251,16 +251,16 @@ export const ConversasPanel: React.FC<ConversasPanelProps> = ({
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 h-[calc(100vh-10rem)]">
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 h-full border border-slate-100 rounded-3xl bg-white shadow-xs overflow-hidden">
         
-        {/* ROOMS SIDE LIST (Hidden on mobile if a room is active) */}
-        <div className={`md:col-span-1 border-r border-slate-100 flex flex-col h-full bg-slate-50/50 ${
-          isRoomActive ? 'hidden md:flex' : 'flex'
-        }`}>
-          <div className="p-4 border-b border-slate-100 bg-white flex justify-between items-center shrink-0">
-            <div>
-              <h3 className="font-display font-bold text-slate-800 text-sm">Canais de Conversa</h3>
-              <p className="text-[10px] text-slate-400">Clique para abrir ou copiar o link</p>
-            </div>
-            {!isGuestMode && (
+        {/* ROOMS SIDE LIST (Hidden in Guest Mode or on mobile if a room is active) */}
+        {!isGuestMode && (
+          <div className={`md:col-span-1 border-r border-slate-100 flex flex-col h-full bg-slate-50/50 ${
+            isRoomActive ? 'hidden md:flex' : 'flex'
+          }`}>
+            <div className="p-4 border-b border-slate-100 bg-white flex justify-between items-center shrink-0">
+              <div>
+                <h3 className="font-display font-bold text-slate-800 text-sm">Canais de Conversa</h3>
+                <p className="text-[10px] text-slate-400">Clique para abrir ou copiar o link</p>
+              </div>
               <button
                 onClick={() => setIsCreating(true)}
                 className="p-1.5 bg-rose-50 text-rose-600 hover:bg-rose-100 rounded-lg text-xs font-semibold cursor-pointer transition-colors"
@@ -268,56 +268,58 @@ export const ConversasPanel: React.FC<ConversasPanelProps> = ({
               >
                 <Plus className="w-4 h-4" />
               </button>
-            )}
-          </div>
+            </div>
 
-          {/* Rooms scroll list */}
-          <div className="flex-1 overflow-y-auto p-2 space-y-1">
-            {rooms.map(room => {
-              const isSelected = room.id === activeRoomId;
-              const lastMsg = room.messages[room.messages.length - 1];
+            {/* Rooms scroll list */}
+            <div className="flex-1 overflow-y-auto p-2 space-y-1">
+              {rooms.map(room => {
+                const isSelected = room.id === activeRoomId;
+                const lastMsg = room.messages[room.messages.length - 1];
 
-              return (
-                <div
-                  key={room.id}
-                  onClick={() => onSelectRoom(room.id)}
-                  className={`flex items-center gap-3 p-3 rounded-2xl cursor-pointer transition-all ${
-                    isSelected 
-                      ? 'bg-rose-50 text-rose-950 border border-rose-100/30 shadow-2xs' 
-                      : 'hover:bg-slate-100 text-slate-700'
-                  }`}
-                >
-                  <div className={`w-10 h-10 rounded-full ${room.avatarColor} text-white flex items-center justify-center font-bold shadow-2xs text-sm shrink-0 uppercase`}>
-                    {room.name.substring(0, 2)}
-                  </div>
-                  <div className="flex-1 overflow-hidden">
-                    <div className="flex justify-between items-baseline">
-                      <h4 className="font-display font-bold text-xs truncate">{room.name}</h4>
-                      {lastMsg && <span className="text-[9px] font-mono text-slate-400">{lastMsg.timestamp}</span>}
+                return (
+                  <div
+                    key={room.id}
+                    onClick={() => onSelectRoom(room.id)}
+                    className={`flex items-center gap-3 p-3 rounded-2xl cursor-pointer transition-all ${
+                      isSelected 
+                        ? 'bg-rose-50 text-rose-950 border border-rose-100/30 shadow-2xs' 
+                        : 'hover:bg-slate-100 text-slate-700'
+                    }`}
+                  >
+                    <div className={`w-10 h-10 rounded-full ${room.avatarColor} text-white flex items-center justify-center font-bold shadow-2xs text-sm shrink-0 uppercase`}>
+                      {room.name.substring(0, 2)}
                     </div>
-                    <p className="text-[10px] text-slate-400 truncate mt-0.5">
-                      {lastMsg ? `${lastMsg.senderName}: ${lastMsg.text}` : room.description}
-                    </p>
+                    <div className="flex-1 overflow-hidden">
+                      <div className="flex justify-between items-baseline">
+                        <h4 className="font-display font-bold text-xs truncate">{room.name}</h4>
+                        {lastMsg && <span className="text-[9px] font-mono text-slate-400">{lastMsg.timestamp}</span>}
+                      </div>
+                      <p className="text-[10px] text-slate-400 truncate mt-0.5">
+                        {lastMsg ? `${lastMsg.senderName}: ${lastMsg.text}` : room.description}
+                      </p>
+                    </div>
                   </div>
-                </div>
-              );
-            })}
+                );
+              })}
+            </div>
           </div>
-        </div>
+        )}
 
-        {/* ACTIVE CHAT SCREEN */}
+        {/* ACTIVE CHAT SCREEN (Spans full width in guest mode) */}
         {isRoomActive && activeRoom ? (
-          <div className="md:col-span-2 flex flex-col h-full bg-[#fdfdfc]">
+          <div className={`${isGuestMode ? 'col-span-1 md:col-span-3' : 'md:col-span-2'} flex flex-col h-full bg-[#fdfdfc]`}>
             
             {/* Active chat header */}
             <div className="p-4 border-b border-slate-100 bg-white flex items-center justify-between shrink-0">
               <div className="flex items-center gap-3 overflow-hidden">
-                <button
-                  onClick={() => onSelectRoom(null)}
-                  className="md:hidden p-1 rounded-md text-slate-400 hover:text-slate-800 hover:bg-slate-50 cursor-pointer"
-                >
-                  <ChevronLeft className="w-5 h-5" />
-                </button>
+                {!isGuestMode && (
+                  <button
+                    onClick={() => onSelectRoom(null)}
+                    className="md:hidden p-1 rounded-md text-slate-400 hover:text-slate-800 hover:bg-slate-50 cursor-pointer"
+                  >
+                    <ChevronLeft className="w-5 h-5" />
+                  </button>
+                )}
                 <div className={`w-9 h-9 rounded-full ${activeRoom.avatarColor} text-white flex items-center justify-center font-bold text-xs uppercase shrink-0`}>
                   {activeRoom.name.substring(0,2)}
                 </div>

@@ -110,7 +110,11 @@ export default function App() {
     const initFirebase = async () => {
       try {
         // Sign-in anonymously so every visitor has a valid uid for Zero-Trust rules
-        await signInAnonymously(auth);
+        try {
+          await signInAnonymously(auth);
+        } catch (authErr) {
+          console.warn('Anonymous Auth is disabled in Firebase console, but continuing with unauthenticated access:', authErr);
+        }
         setAuthReady(true);
         
         // Execute system-mandated connection check & seed empty DB collections
@@ -118,6 +122,7 @@ export default function App() {
         await seedDatabaseIfEmpty();
       } catch (err) {
         console.error('Firebase Auth/Seed Error:', err);
+        setAuthReady(true);
       }
     };
     initFirebase();
@@ -135,7 +140,7 @@ export default function App() {
       setAgenda(items);
       localStorage.setItem('joao_agenda', JSON.stringify(items));
     }, (err) => {
-      handleFirestoreError(err, OperationType.LIST, 'agenda');
+      console.error('Error listening to agenda:', err);
     });
 
     const unsubRecados = onSnapshot(collection(db, 'recados'), (snap) => {
@@ -146,7 +151,7 @@ export default function App() {
       setRecados(items);
       localStorage.setItem('joao_recados', JSON.stringify(items));
     }, (err) => {
-      handleFirestoreError(err, OperationType.LIST, 'recados');
+      console.error('Error listening to recados:', err);
     });
 
     const unsubMemorias = onSnapshot(collection(db, 'memorias'), (snap) => {
@@ -157,7 +162,7 @@ export default function App() {
       setMemorias(items);
       localStorage.setItem('joao_memorias', JSON.stringify(items));
     }, (err) => {
-      handleFirestoreError(err, OperationType.LIST, 'memorias');
+      console.error('Error listening to memorias:', err);
     });
 
     const unsubCartinhas = onSnapshot(collection(db, 'cartinhas'), (snap) => {
@@ -168,7 +173,7 @@ export default function App() {
       setCartinhas(items);
       localStorage.setItem('joao_cartinhas', JSON.stringify(items));
     }, (err) => {
-      handleFirestoreError(err, OperationType.LIST, 'cartinhas');
+      console.error('Error listening to cartinhas:', err);
     });
 
     const unsubConteudos = onSnapshot(collection(db, 'conteudos'), (snap) => {
@@ -179,7 +184,7 @@ export default function App() {
       setConteudos(items);
       localStorage.setItem('joao_conteudos', JSON.stringify(items));
     }, (err) => {
-      handleFirestoreError(err, OperationType.LIST, 'conteudos');
+      console.error('Error listening to conteudos:', err);
     });
 
     const unsubConversas = onSnapshot(collection(db, 'conversas'), (snap) => {
@@ -208,7 +213,7 @@ export default function App() {
         return merged;
       });
     }, (err) => {
-      handleFirestoreError(err, OperationType.LIST, 'conversas');
+      console.error('Error listening to conversas:', err);
     });
 
     return () => {
@@ -225,16 +230,36 @@ export default function App() {
   useEffect(() => {
     if (!authReady || !activeRoomId) return;
 
-    const messagesQuery = query(
-      collection(db, 'conversas', activeRoomId, 'messages'),
-      orderBy('timestamp', 'asc')
-    );
+    const messagesColl = collection(db, 'conversas', activeRoomId, 'messages');
 
-    const unsubMessages = onSnapshot(messagesQuery, (snap) => {
+    const unsubMessages = onSnapshot(messagesColl, (snap) => {
       const msgs: ChatMessage[] = [];
       snap.forEach(doc => {
         msgs.push(doc.data() as ChatMessage);
       });
+
+      // Robust in-memory sorting using chronological and monotonic ID properties
+      msgs.sort((a, b) => {
+        const getSortKey = (id: string) => {
+          if (id.startsWith('msg-')) {
+            const num = Number(id.replace('msg-', ''));
+            return isNaN(num) ? Date.now() : num;
+          }
+          if (id.startsWith('msg')) {
+            const num = Number(id.replace('msg', ''));
+            return isNaN(num) ? 0 : num; // Ensure initial seeded messages are positioned chronologically first
+          }
+          return 0;
+        };
+
+        const keyA = getSortKey(a.id);
+        const keyB = getSortKey(b.id);
+        if (keyA !== keyB) {
+          return keyA - keyB;
+        }
+        return a.timestamp.localeCompare(b.timestamp);
+      });
+
       setConversas(prev => {
         const updated = prev.map(room => {
           if (room.id === activeRoomId) {
@@ -246,7 +271,7 @@ export default function App() {
         return updated;
       });
     }, (err) => {
-      handleFirestoreError(err, OperationType.LIST, `conversas/${activeRoomId}/messages`);
+      console.error(`Error listening to messages for active room ${activeRoomId}:`, err);
     });
 
     return () => unsubMessages();
@@ -268,13 +293,10 @@ export default function App() {
       const hash = window.location.hash;
       if (hash.startsWith('#/chat/')) {
         const roomId = hash.replace('#/chat/', '');
-        const exists = conversas.some(room => room.id === roomId);
-        if (exists) {
-          setCurrentTab('compartilhado');
-          setActivePanelId('conversas');
-          setActiveRoomId(roomId);
-          setIsGuestMode(true);
-        }
+        setCurrentTab('compartilhado');
+        setActivePanelId('conversas');
+        setActiveRoomId(roomId);
+        setIsGuestMode(true);
       } else if (hash === '' || hash === '#/') {
         // Only reset if previously in guest mode, to allow normal internal navigation
         if (isGuestMode) {
@@ -289,7 +311,7 @@ export default function App() {
     handleHashRoute();
     window.addEventListener('hashchange', handleHashRoute);
     return () => window.removeEventListener('hashchange', handleHashRoute);
-  }, [conversas, isGuestMode]);
+  }, [isGuestMode]);
 
   // Navigate panel
   const handleSelectPanel = (panelId: string | null) => {

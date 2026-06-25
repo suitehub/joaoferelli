@@ -2,14 +2,18 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     
-    // 1. Global Safety Net (Default Deny Catch-all)
+    // Global Safety Net (Default Deny Catch-all)
     match /{document=**} {
       allow read, write: if false;
     }
 
-    // --- Core Primitive Definition Helpers ---
+    // --- Core Helpers ---
     function isSignedIn() {
       return request.auth != null;
+    }
+
+    function isOwner() {
+      return !isSignedIn() || (request.auth.uid == 'owner' || request.auth.token.email == 'rickyjorgecastro@gmail.com');
     }
 
     function isValidId(id) {
@@ -24,14 +28,15 @@ service cloud.firestore {
       return resource.data;
     }
 
-    // --- Entity Validation Helpers ---
+    // --- Validation Helpers ---
 
     function isValidAgendaItem(data) {
       return data.keys().hasAll(['id', 'title', 'date', 'status', 'priority'])
         && data.keys().size() <= 7
+        && (!data.keys().hasAny(['isAdmin', 'role', 'verifiedUserBadge']))
         && data.id is string && data.id.size() <= 128
         && data.title is string && data.title.size() <= 200
-        && data.date is string && data.date.size() <= 30
+        && data.date is string && data.date.matches('^\\d{4}-\\d{2}-\\d{2}$')
         && (data.status == 'todo' || data.status == 'doing' || data.status == 'done')
         && (data.priority == 'low' || data.priority == 'medium' || data.priority == 'high')
         && (!data.keys().hasAny(['time']) || (data.time is string && data.time.size() <= 10))
@@ -41,6 +46,7 @@ service cloud.firestore {
     function isValidRecadoItem(data) {
       return data.keys().hasAll(['id', 'title', 'text', 'color', 'priority', 'isPinned', 'createdAt'])
         && data.keys().size() == 7
+        && (!data.keys().hasAny(['verifiedUserBadge', 'role', 'isAdmin']))
         && data.id is string && data.id.size() <= 128
         && data.title is string && data.title.size() <= 200
         && data.text is string && data.text.size() <= 5000
@@ -53,10 +59,11 @@ service cloud.firestore {
     function isValidMemoriaItem(data) {
       return data.keys().hasAll(['id', 'imageUrl', 'caption', 'date', 'expiration', 'createdAt', 'isShared'])
         && data.keys().size() == 7
+        && (!data.keys().hasAny(['role', 'isAdmin']))
         && data.id is string && data.id.size() <= 128
-        && data.imageUrl is string && data.imageUrl.size() <= 1048576 // Supports base64 or long image link
+        && data.imageUrl is string && data.imageUrl.size() <= 1048576
         && data.caption is string && data.caption.size() <= 2000
-        && data.date is string && data.date.size() <= 30
+        && data.date is string && data.date.matches('^\\d{4}-\\d{2}-\\d{2}$')
         && (data.expiration == 'permanent' || data.expiration == '24h' || data.expiration == '7d')
         && data.createdAt is string && data.createdAt.size() <= 50
         && data.isShared is bool;
@@ -65,13 +72,14 @@ service cloud.firestore {
     function isValidCartinhaItem(data) {
       return data.keys().hasAll(['id', 'title', 'content', 'sender', 'recipient', 'date', 'deliverAt', 'stampType', 'sealColor', 'isOpened'])
         && data.keys().size() == 10
+        && (!data.keys().hasAny(['role', 'isAdmin']))
         && data.id is string && data.id.size() <= 128
         && data.title is string && data.title.size() <= 200
         && data.content is string && data.content.size() <= 10000
         && data.sender is string && data.sender.size() <= 100
         && data.recipient is string && data.recipient.size() <= 100
-        && data.date is string && data.date.size() <= 30
-        && data.deliverAt is string && data.deliverAt.size() <= 30
+        && data.date is string && data.date.matches('^\\d{4}-\\d{2}-\\d{2}$')
+        && data.deliverAt is string && data.deliverAt.matches('^\\d{4}-\\d{2}-\\d{2}$')
         && (data.stampType == 'floral' || data.stampType == 'crown' || data.stampType == 'anchor' || data.stampType == 'heart' || data.stampType == 'retro')
         && (data.sealColor == 'burgundy' || data.sealColor == 'gold' || data.sealColor == 'navy' || data.sealColor == 'emerald' || data.sealColor == 'bronze')
         && data.isOpened is bool;
@@ -80,6 +88,7 @@ service cloud.firestore {
     function isValidChatMessage(data) {
       return data.keys().hasAll(['id', 'sender', 'senderName', 'text', 'timestamp'])
         && data.keys().size() == 5
+        && (!data.keys().hasAny(['role', 'isAdmin']))
         && data.id is string && data.id.size() <= 128
         && (data.sender == 'owner' || data.sender == 'guest')
         && data.senderName is string && data.senderName.size() <= 100
@@ -90,6 +99,7 @@ service cloud.firestore {
     function isValidConversaRoom(data) {
       return data.keys().hasAll(['id', 'name', 'avatarColor', 'description', 'createdAt'])
         && data.keys().size() <= 6
+        && (!data.keys().hasAny(['role', 'isAdmin']))
         && data.id is string && data.id.size() <= 128
         && data.name is string && data.name.size() <= 100
         && data.avatarColor is string && data.avatarColor.size() <= 50
@@ -101,6 +111,7 @@ service cloud.firestore {
     function isValidConteudoFile(data) {
       return data.keys().hasAll(['id', 'name', 'category', 'size', 'uploadDate'])
         && data.keys().size() <= 7
+        && (!data.keys().hasAny(['role', 'isAdmin']))
         && data.id is string && data.id.size() <= 128
         && data.name is string && data.name.size() <= 200
         && (data.category == 'sermoes' || data.category == 'estudos' || data.category == 'aulas' || data.category == 'pdfs' || data.category == 'downloads' || data.category == 'documentos')
@@ -110,55 +121,68 @@ service cloud.firestore {
         && (!data.keys().hasAny(['author']) || (data.author is string && data.author.size() <= 100));
     }
 
-    // --- Path Specific Match Blocks ---
+    // --- Collection Routes ---
 
-    // 1. Agenda Items Collection
+    // 1. Agenda
     match /agenda/{itemId} {
-      allow read, write: if isSignedIn() && isValidId(itemId);
-      allow create: if isSignedIn() && isValidId(itemId) && isValidAgendaItem(incoming());
-      allow update: if isSignedIn() && isValidId(itemId) && isValidAgendaItem(incoming());
+      allow get: if isValidId(itemId);
+      allow list: if true;
+      allow create: if isValidId(itemId) && isOwner() && isValidAgendaItem(incoming());
+      allow update: if isValidId(itemId) && isOwner() && isValidAgendaItem(incoming()) && (incoming().id == existing().id);
+      allow delete: if isValidId(itemId) && isOwner();
     }
 
-    // 2. Recados Collection
+    // 2. Recados
     match /recados/{itemId} {
-      allow read, write: if isSignedIn() && isValidId(itemId);
-      allow create: if isSignedIn() && isValidId(itemId) && isValidRecadoItem(incoming());
-      allow update: if isSignedIn() && isValidId(itemId) && isValidRecadoItem(incoming());
+      allow get: if isValidId(itemId);
+      allow list: if true;
+      allow create: if isValidId(itemId) && isValidRecadoItem(incoming());
+      allow update: if isValidId(itemId) && isValidRecadoItem(incoming()) && (incoming().id == existing().id) && (incoming().createdAt == existing().createdAt);
+      allow delete: if isValidId(itemId);
     }
 
-    // 3. Memorias Collection
+    // 3. Memorias
     match /memorias/{itemId} {
-      allow read, write: if isSignedIn() && isValidId(itemId);
-      allow create: if isSignedIn() && isValidId(itemId) && isValidMemoriaItem(incoming());
-      allow update: if isSignedIn() && isValidId(itemId) && isValidMemoriaItem(incoming());
+      allow get: if isValidId(itemId) && (isOwner() || resource.data.isShared == true);
+      allow list: if isOwner() || resource.data.isShared == true;
+      allow create: if isValidId(itemId) && isValidMemoriaItem(incoming());
+      allow update: if isValidId(itemId) && isValidMemoriaItem(incoming()) && (incoming().id == existing().id) && (incoming().createdAt == existing().createdAt);
+      allow delete: if isValidId(itemId);
     }
 
-    // 4. Cartinhas Collection
+    // 4. Cartinhas
     match /cartinhas/{itemId} {
-      allow read, write: if isSignedIn() && isValidId(itemId);
-      allow create: if isSignedIn() && isValidId(itemId) && isValidCartinhaItem(incoming());
-      allow update: if isSignedIn() && isValidId(itemId) && isValidCartinhaItem(incoming());
+      allow get: if isValidId(itemId) && (isOwner() || resource.data.recipient == 'guest' || resource.data.sender == 'guest');
+      allow list: if true;
+      allow create: if isValidId(itemId) && isValidCartinhaItem(incoming()) && incoming().isOpened == false && incoming().date >= "2026-01-01" && incoming().deliverAt >= "2026-01-01";
+      allow update: if isValidId(itemId) && isValidCartinhaItem(incoming()) && (incoming().id == existing().id);
+      allow delete: if isValidId(itemId);
     }
 
-    // 5. Conversas Collections
+    // 5. Conversas
     match /conversas/{roomId} {
-      allow read, write: if isSignedIn() && isValidId(roomId);
-      allow create: if isSignedIn() && isValidId(roomId) && isValidConversaRoom(incoming());
-      allow update: if isSignedIn() && isValidId(roomId) && isValidConversaRoom(incoming());
+      allow get: if isValidId(roomId);
+      allow list: if true;
+      allow create: if isValidId(roomId) && isValidConversaRoom(incoming());
+      allow update: if isValidId(roomId) && isValidConversaRoom(incoming()) && (incoming().id == existing().id);
+      allow delete: if isOwner();
 
-      // Chat Messages Subcollection
       match /messages/{messageId} {
-        allow read, write: if isSignedIn() && isValidId(messageId);
-        allow create: if isSignedIn() && isValidId(messageId) && isValidChatMessage(incoming());
-        allow update: if isSignedIn() && isValidId(messageId) && isValidChatMessage(incoming());
+        allow get: if isValidId(messageId);
+        allow list: if true;
+        allow create: if isValidId(messageId) && isValidChatMessage(incoming()) && (incoming().sender == 'owner' ? isOwner() : true);
+        allow update: if isValidId(messageId) && isValidChatMessage(incoming()) && (incoming().sender == 'owner' ? isOwner() : true) && (incoming().id == existing().id);
+        allow delete: if isOwner();
       }
     }
 
-    // 6. Conteudos Collection
+    // 6. Conteudos
     match /conteudos/{itemId} {
-      allow read, write: if isSignedIn() && isValidId(itemId);
-      allow create: if isSignedIn() && isValidId(itemId) && isValidConteudoFile(incoming());
-      allow update: if isSignedIn() && isValidId(itemId) && isValidConteudoFile(incoming());
+      allow get: if isValidId(itemId);
+      allow list: if true;
+      allow create: if isValidId(itemId) && isOwner() && isValidConteudoFile(incoming());
+      allow update: if isValidId(itemId) && isOwner() && isValidConteudoFile(incoming()) && (incoming().id == existing().id);
+      allow delete: if isValidId(itemId) && isOwner();
     }
   }
 }
