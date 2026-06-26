@@ -523,7 +523,7 @@ export default function App() {
               // 2. Don't notify if the user is actively viewing this room and the conversation panel is open
               const isCurrentlyViewing = activePanelId === 'conversas' && activeRoomId === roomId;
 
-              if (!isFromSelf && !isCurrentlyViewing) {
+              if (!isFromSelf) {
                 // Find room name
                 const room = conversas.find(r => r.id === roomId);
                 const roomName = room ? room.name : 'Conversas';

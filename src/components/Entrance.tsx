@@ -20,6 +20,9 @@ export const Entrance: React.FC<EntranceProps> = ({ profiles, onSelectProfile })
 
   const handleAdminSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if ('Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission().catch(() => {});
+    }
     if (code.trim() === 'adm') {
       if (selectedProfile) {
         onSelectProfile(selectedProfile);
@@ -31,6 +34,9 @@ export const Entrance: React.FC<EntranceProps> = ({ profiles, onSelectProfile })
   };
 
   const handleProfileClick = (profile: Profile) => {
+    if ('Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission().catch(() => {});
+    }
     if (profile.isAdmin) {
       setSelectedProfile(profile);
       setCode('');

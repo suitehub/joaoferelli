@@ -83,6 +83,28 @@ export const Dashboard: React.FC<DashboardProps> = ({
   const totalConversas = conversas.length;
   const totalConteudos = conteudos.length;
 
+  const hasUnreadConversas = () => {
+    const savedTimes = localStorage.getItem('joao_last_read_times');
+    const lastReadTimes = savedTimes ? JSON.parse(savedTimes) : {};
+    
+    return conversas.some(room => {
+      if (!room.messages || room.messages.length === 0) return false;
+      const lastMsg = room.messages[room.messages.length - 1];
+      
+      const currentUserRole = isGuestMode ? 'guest' : 'owner';
+      const guestName = localStorage.getItem('joao_guest_name') || '';
+      const isFromSelf = isGuestMode 
+        ? (lastMsg.sender === 'guest' && lastMsg.senderName === guestName)
+        : lastMsg.sender === 'owner';
+        
+      if (isFromSelf) return false;
+      
+      const lastRead = lastReadTimes[room.id];
+      if (!lastRead) return true;
+      return lastMsg.timestamp > lastRead;
+    });
+  };
+
   const containerVariants = {
     hidden: { opacity: 0 },
     show: {
@@ -456,8 +478,14 @@ export const Dashboard: React.FC<DashboardProps> = ({
               >
                 <div>
                   <div className="flex justify-between items-start">
-                    <div className="p-3 bg-rose-50 text-rose-600 rounded-2xl group-hover:bg-rose-500 group-hover:text-white transition-colors duration-300">
+                    <div className="p-3 bg-rose-50 text-rose-600 rounded-2xl group-hover:bg-rose-500 group-hover:text-white transition-colors duration-300 relative">
                       <MessageSquare className="w-6 h-6" />
+                      {hasUnreadConversas() && (
+                        <span className="absolute -top-1 -right-1 w-3 h-3 bg-rose-500 rounded-full border-2 border-white animate-ping" />
+                      )}
+                      {hasUnreadConversas() && (
+                        <span className="absolute -top-1 -right-1 w-3 h-3 bg-rose-500 rounded-full border-2 border-white" />
+                      )}
                     </div>
                     <span className="text-xs font-mono text-slate-400">COMPARTILHADO 02</span>
                   </div>
@@ -471,6 +499,11 @@ export const Dashboard: React.FC<DashboardProps> = ({
                 <div className="flex justify-between items-center pt-4 border-t border-slate-50">
                   <div className="flex items-center gap-3">
                     <span className="text-xs font-mono text-slate-500">{totalConversas} salas de bate-papo ativas</span>
+                    {hasUnreadConversas() && (
+                      <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold font-mono bg-rose-50 text-rose-600 border border-rose-100 animate-pulse">
+                        ● Novas mensagens
+                      </span>
+                    )}
                   </div>
                   <ArrowRight className="w-4 h-4 text-slate-300 group-hover:text-rose-500 group-hover:translate-x-1 transition-all" />
                 </div>

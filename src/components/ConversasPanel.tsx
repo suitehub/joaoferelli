@@ -66,6 +66,39 @@ export const ConversasPanel: React.FC<ConversasPanelProps> = ({
   const activeRoom = rooms.find(r => r.id === activeRoomId);
   const isRoomActive = !!(activeRoomId && activeRoom);
 
+  // Unread messages tracking
+  const [lastReadTimes, setLastReadTimes] = useState<{ [roomId: string]: string }>(() => {
+    const saved = localStorage.getItem('joao_last_read_times');
+    return saved ? JSON.parse(saved) : {};
+  });
+
+  useEffect(() => {
+    if (activeRoomId) {
+      setLastReadTimes(prev => {
+        const updated = { ...prev, [activeRoomId]: new Date().toISOString() };
+        localStorage.setItem('joao_last_read_times', JSON.stringify(updated));
+        return updated;
+      });
+    }
+  }, [activeRoomId, rooms]);
+
+  const hasUnread = (room: ConversaRoom) => {
+    if (room.id === activeRoomId) return false;
+    if (!room.messages || room.messages.length === 0) return false;
+    
+    const lastMsg = room.messages[room.messages.length - 1];
+    const isFromSelf = isGuestMode 
+      ? (lastMsg.sender === 'guest' && lastMsg.senderName === guestName)
+      : lastMsg.sender === 'owner';
+      
+    if (isFromSelf) return false;
+    
+    const lastRead = lastReadTimes[room.id];
+    if (!lastRead) return true;
+    
+    return lastMsg.timestamp > lastRead;
+  };
+
   // Auto-scroll to bottom of chats
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -198,8 +231,11 @@ export const ConversasPanel: React.FC<ConversasPanelProps> = ({
                         : 'hover:bg-slate-100 text-slate-700'
                     }`}
                   >
-                    <div className={`w-10 h-10 rounded-full ${room.avatarColor} text-white flex items-center justify-center font-bold shadow-2xs text-sm shrink-0 uppercase`}>
+                    <div className={`w-10 h-10 rounded-full ${room.avatarColor} text-white flex items-center justify-center font-bold shadow-2xs text-sm shrink-0 uppercase relative`}>
                       {room.name.substring(0, 2)}
+                      {hasUnread(room) && (
+                        <span className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full border-2 border-white animate-pulse" />
+                      )}
                     </div>
                     <div className="flex-1 overflow-hidden pr-6">
                       <div className="flex justify-between items-baseline">
