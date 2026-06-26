@@ -19,6 +19,8 @@ import { ConteudosPanel } from './components/ConteudosPanel';
 import { TimezonePanel } from './components/TimezonePanel';
 import { Entrance } from './components/Entrance';
 import { ProfilePanel } from './components/ProfilePanel';
+import { NotificationToastContainer } from './components/NotificationToastContainer';
+import { notificationService } from './utils/notificationService';
 
 import { auth, db, handleFirestoreError, OperationType } from './firebase';
 
@@ -65,6 +67,8 @@ import {
 } from './utils/firebaseSync';
 
 export default function App() {
+  const appStartTime = useRef<number>(Date.now());
+
   // Global States
   const [currentTab, setCurrentTab] = useState<'meu-mundo' | 'compartilhado'>('meu-mundo');
   const [activePanelId, setActivePanelId] = useState<string | null>(null);
@@ -216,6 +220,22 @@ export default function App() {
       snap.forEach(doc => {
         items.push(doc.data() as RecadoItem);
       });
+
+      // Notify for newly added recados
+      snap.docChanges().forEach((change) => {
+        if (change.type === 'added') {
+          const data = change.doc.data() as RecadoItem;
+          const createdTime = Date.parse(data.createdAt || '');
+          if (!isNaN(createdTime) && createdTime > appStartTime.current) {
+            notificationService.trigger(
+              'Novo Recado no Mural! 📌',
+              `"${data.title}" por ${data.createdByName || 'Convidado'}`,
+              'recado'
+            );
+          }
+        }
+      });
+
       setRecados(items);
       localStorage.setItem('joao_recados', JSON.stringify(items));
     }, (err) => {
@@ -238,6 +258,28 @@ export default function App() {
       snap.forEach(doc => {
         items.push(doc.data() as CartinhaItem);
       });
+
+      // Notify for newly added cartinhas
+      snap.docChanges().forEach((change) => {
+        if (change.type === 'added') {
+          const data = change.doc.data() as CartinhaItem;
+          let createdTime = Date.now();
+          if (data.id && data.id.startsWith('letter-')) {
+            const ts = Number(data.id.replace('letter-', ''));
+            if (!isNaN(ts)) {
+              createdTime = ts;
+            }
+          }
+          if (createdTime > appStartTime.current) {
+            notificationService.trigger(
+              'Nova Cartinha de Amor! 💌',
+              `Você recebeu a cartinha "${data.title}" de ${data.sender}`,
+              'cartinha'
+            );
+          }
+        }
+      });
+
       setCartinhas(items);
       localStorage.setItem('joao_cartinhas', JSON.stringify(items));
     }, (err) => {
@@ -449,6 +491,145 @@ export default function App() {
       localStorage.setItem('joao_guest_name', guestName);
     }
   }, [guestName]);
+
+  // 3. Real-time notification listeners for new messages
+  useEffect(() => {
+    if (!authReady) return;
+
+    // A map to store unsubscribe functions for each room's messages
+    const roomMessageUnsubs: { [roomId: string]: () => void } = {};
+
+    // Helper to setup snapshot listener for a room
+    const listenToRoomMessages = (roomId: string) => {
+      if (roomMessageUnsubs[roomId]) return; // Already listening
+
+      const msgsColl = collection(db, 'conversas', roomId, 'messages');
+      roomMessageUnsubs[roomId] = onSnapshot(msgsColl, (snap) => {
+        snap.docChanges().forEach((change) => {
+          if (change.type === 'added') {
+            const msg = change.doc.data() as ChatMessage;
+            
+            // Check if this message was sent after the app loaded
+            const msgTime = Date.parse(msg.timestamp || '');
+            const isHistorical = isNaN(msgTime) || msgTime <= appStartTime.current;
+            
+            if (!isHistorical) {
+              // Determine if we should notify
+              // 1. Don't notify if the message was sent by the current user
+              const currentUserRole = currentProfile?.isAdmin ? 'owner' : 'guest';
+              const isFromSelf = msg.sender === currentUserRole;
+              
+              // 2. Don't notify if the user is actively viewing this room and the conversation panel is open
+              const isCurrentlyViewing = activePanelId === 'conversas' && activeRoomId === roomId;
+
+              if (!isFromSelf && !isCurrentlyViewing) {
+                // Find room name
+                const room = conversas.find(r => r.id === roomId);
+                const roomName = room ? room.name : 'Conversas';
+                
+                notificationService.trigger(
+                  `Nova Mensagem em ${roomName} 💬`,
+                  `${msg.senderName}: "${msg.text}"`,
+                  'message'
+                );
+              }
+            }
+          }
+        });
+      }, (err) => {
+        console.error(`Error listening notifications for room ${roomId}:`, err);
+      });
+    };
+
+    const isRestricted = isGuestMode || (currentProfile && !currentProfile.isAdmin);
+    
+    if (isRestricted) {
+      const guestRoomId = currentProfile ? `room-${currentProfile.id}` : (activeRoomId || '');
+      if (guestRoomId) {
+        listenToRoomMessages(guestRoomId);
+      }
+    } else {
+      // Admin: listen to all loaded rooms
+      conversas.forEach((room) => {
+        listenToRoomMessages(room.id);
+      });
+    }
+
+    return () => {
+      // Clean up all message listeners
+      Object.values(roomMessageUnsubs).forEach((unsub) => unsub());
+    };
+  }, [authReady, conversas.length, isGuestMode, currentProfile, activePanelId, activeRoomId]);
+
+  // 4. Background interval for active alarms and agenda reminders
+  useEffect(() => {
+    let lastCheckedMinute = '';
+    
+    const checkInterval = setInterval(() => {
+      const now = new Date();
+      
+      const formatterBraz = new Intl.DateTimeFormat('pt-BR', { 
+        timeZone: 'America/Sao_Paulo', 
+        hour: '2-digit', 
+        minute: '2-digit', 
+        hour12: false 
+      });
+      
+      const formatterEgy = new Intl.DateTimeFormat('pt-BR', { 
+        timeZone: 'Africa/Cairo', 
+        hour: '2-digit', 
+        minute: '2-digit', 
+        hour12: false 
+      });
+
+      const dateParts = new Intl.DateTimeFormat('pt-BR', { 
+        timeZone: 'America/Sao_Paulo', 
+        year: 'numeric', 
+        month: '2-digit', 
+        day: '2-digit' 
+      }).formatToParts(now);
+      
+      const year = dateParts.find(p => p.type === 'year')?.value;
+      const month = dateParts.find(p => p.type === 'month')?.value;
+      const day = dateParts.find(p => p.type === 'day')?.value;
+      const todayBrazilStr = `${year}-${month}-${day}`;
+      
+      const timeBrazil = formatterBraz.format(now);
+      const timeEgypt = formatterEgy.format(now);
+      
+      const currentMinuteKey = `${todayBrazilStr}-${timeBrazil}`;
+      if (currentMinuteKey === lastCheckedMinute) return;
+      lastCheckedMinute = currentMinuteKey;
+      
+      // Check alarms
+      timezoneAlarms.forEach((alarm) => {
+        const isBrazilMatch = alarm.timeBrazil === timeBrazil;
+        const isEgyptMatch = alarm.timeEgypt === timeEgypt;
+        
+        if (isBrazilMatch || isEgyptMatch) {
+          notificationService.trigger(
+            `Alarme de Fuso Ativado! ⏰`,
+            `Alarme: "${alarm.title}" (BR: ${alarm.timeBrazil} | EG: ${alarm.timeEgypt})`,
+            'alarm'
+          );
+        }
+      });
+
+      // Check agenda
+      agenda.forEach((item) => {
+        if (item.date === todayBrazilStr && item.time === timeBrazil && item.status !== 'done') {
+          notificationService.trigger(
+            `Lembrete de Atividade! 📅`,
+            `Está na hora: "${item.title}" (${item.priority === 'high' ? 'Prioridade Alta' : 'Atividade Agendada'})`,
+            'agenda'
+          );
+        }
+      });
+
+    }, 10000); // Check every 10 seconds
+
+    return () => clearInterval(checkInterval);
+  }, [timezoneAlarms, agenda]);
 
   // Client-side Hash Router for direct link-based shared chats e.g. #/chat/familia
   useEffect(() => {
@@ -924,6 +1105,7 @@ export default function App() {
         <div>Cabeça do João — Segundo Cérebro Digital © {new Date().getFullYear()}</div>
       </footer>
 
+      <NotificationToastContainer />
     </div>
   );
 }

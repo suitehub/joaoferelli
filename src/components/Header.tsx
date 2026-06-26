@@ -3,8 +3,10 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React from 'react';
-import { Shield, Users, Brain, RefreshCw, ChevronLeft } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Shield, Users, Brain, RefreshCw, ChevronLeft, Bell } from 'lucide-react';
+import { NotificationSettingsModal } from './NotificationSettingsModal';
+import { notificationService } from '../utils/notificationService';
 
 interface HeaderProps {
   currentTab: 'meu-mundo' | 'compartilhado';
@@ -25,6 +27,16 @@ export const Header: React.FC<HeaderProps> = ({
   currentProfileName,
   onLogout,
 }) => {
+  const [isNotificationModalOpen, setIsNotificationModalOpen] = useState(false);
+  const [notificationsEnabled, setNotificationsEnabled] = useState(() => notificationService.getSettings().enabled);
+
+  useEffect(() => {
+    const checkInterval = setInterval(() => {
+      setNotificationsEnabled(notificationService.getSettings().enabled);
+    }, 1000);
+    return () => clearInterval(checkInterval);
+  }, []);
+
   // Map panel keys to friendly display names in Portuguese
   const getPanelDisplayName = (panel: string | null) => {
     if (!panel) return '';
@@ -47,12 +59,12 @@ export const Header: React.FC<HeaderProps> = ({
         {/* Brand Logo & Name (Enlarged and highlighted) */}
         <div 
           onClick={isGuestMode ? undefined : onBack}
-          className={`flex items-center gap-3 md:gap-4 select-none min-w-0 ${isGuestMode ? 'cursor-default' : 'cursor-pointer group'}`}
+          className={`flex items-center gap-2 sm:gap-3 md:gap-4 select-none min-w-0 ${isGuestMode ? 'cursor-default' : 'cursor-pointer group'}`}
         >
           <div className="relative shrink-0">
             {/* Glowing outer ring to showcase active brain state */}
             {!isGuestMode && <div className="absolute -inset-1 bg-gradient-to-tr from-blue-600 via-indigo-500 to-emerald-500 rounded-full blur-xs opacity-75 group-hover:opacity-100 group-hover:scale-105 transition-all duration-300 animate-pulse" style={{ animationDuration: '4s' }}></div>}
-            <div className={`relative w-12 h-12 md:w-16 md:h-16 rounded-full bg-slate-900 border-2 border-white shadow-md overflow-hidden flex items-center justify-center`}>
+            <div className={`relative w-10 h-10 sm:w-12 sm:h-12 md:w-16 md:h-16 rounded-full bg-slate-900 border-2 border-white shadow-md overflow-hidden flex items-center justify-center`}>
               <img 
                 src="./logojoao.png" 
                 alt="Cabeça do João" 
@@ -63,7 +75,7 @@ export const Header: React.FC<HeaderProps> = ({
                   const parent = e.currentTarget.parentElement;
                   if (parent) {
                     const fallback = document.createElement('div');
-                    fallback.className = "w-full h-full rounded-full bg-gradient-to-tr from-blue-600 to-indigo-700 text-white flex items-center justify-center font-display font-black text-lg";
+                    fallback.className = "w-full h-full rounded-full bg-gradient-to-tr from-blue-600 to-indigo-700 text-white flex items-center justify-center font-display font-black text-xs sm:text-sm md:text-lg";
                     fallback.innerText = "CJ";
                     parent.appendChild(fallback);
                   }
@@ -73,11 +85,11 @@ export const Header: React.FC<HeaderProps> = ({
             </div>
           </div>
           <div className="min-w-0">
-            <div className="flex items-center gap-1.5">
-              <h1 className="font-display font-black text-lg md:text-2xl tracking-tight bg-gradient-to-r from-slate-900 via-blue-950 to-indigo-900 bg-clip-text text-transparent leading-none">
+            <div className="flex flex-wrap items-center gap-1 sm:gap-1.5">
+              <h1 className="font-display font-black text-sm sm:text-lg md:text-2xl tracking-tight bg-gradient-to-r from-slate-900 via-blue-950 to-indigo-900 bg-clip-text text-transparent leading-none">
                 Cabeça do João
               </h1>
-              <span className="text-[8px] md:text-[9px] font-mono font-extrabold bg-blue-50 text-blue-600 border border-blue-100 px-1.5 py-0.5 rounded-full select-none shrink-0">
+              <span className="text-[7px] sm:text-[8px] md:text-[9px] font-mono font-extrabold bg-blue-50 text-blue-600 border border-blue-100 px-1 sm:px-1.5 py-0.5 rounded-full select-none shrink-0">
                 PRO v1.0
               </span>
             </div>
@@ -97,6 +109,18 @@ export const Header: React.FC<HeaderProps> = ({
 
         {/* Action/Selector Controls */}
         <div className="shrink-0 flex items-center gap-2">
+          {/* Notification Settings Toggle */}
+          <button
+            onClick={() => setIsNotificationModalOpen(true)}
+            className="p-2 bg-slate-50 hover:bg-slate-100 text-slate-600 rounded-xl border border-slate-200/60 cursor-pointer transition-all flex items-center justify-center relative min-h-[36px] min-w-[36px]"
+            title="Configurações de Notificação"
+          >
+            <Bell className={`w-4 h-4 ${notificationsEnabled ? 'text-rose-500 animate-swing' : 'text-slate-400'}`} />
+            {notificationsEnabled && (
+              <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 bg-rose-500 rounded-full ring-2 ring-white animate-pulse" />
+            )}
+          </button>
+
           {isGuestMode ? (
             <div className="flex items-center gap-1.5 bg-rose-50 border border-rose-100/50 text-rose-600 px-3 py-2 rounded-xl text-[10px] font-bold tracking-wider font-mono">
               <span className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse" />
@@ -149,6 +173,7 @@ export const Header: React.FC<HeaderProps> = ({
         </div>
 
       </div>
+      <NotificationSettingsModal isOpen={isNotificationModalOpen} onClose={() => setIsNotificationModalOpen(false)} />
     </header>
   );
 };
