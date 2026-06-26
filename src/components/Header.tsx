@@ -3,10 +3,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect } from 'react';
-import { Shield, Users, Brain, RefreshCw, ChevronLeft, Bell } from 'lucide-react';
-import { NotificationSettingsModal } from './NotificationSettingsModal';
-import { notificationService } from '../utils/notificationService';
+import React from 'react';
+import { Shield, Users, Brain, RefreshCw, ChevronLeft } from 'lucide-react';
 
 interface HeaderProps {
   currentTab: 'meu-mundo' | 'compartilhado';
@@ -27,15 +25,6 @@ export const Header: React.FC<HeaderProps> = ({
   currentProfileName,
   onLogout,
 }) => {
-  const [isNotificationModalOpen, setIsNotificationModalOpen] = useState(false);
-  const [notificationsEnabled, setNotificationsEnabled] = useState(() => notificationService.getSettings().enabled);
-
-  useEffect(() => {
-    const checkInterval = setInterval(() => {
-      setNotificationsEnabled(notificationService.getSettings().enabled);
-    }, 1000);
-    return () => clearInterval(checkInterval);
-  }, []);
 
   // Map panel keys to friendly display names in Portuguese
   const getPanelDisplayName = (panel: string | null) => {
@@ -109,18 +98,6 @@ export const Header: React.FC<HeaderProps> = ({
 
         {/* Action/Selector Controls */}
         <div className="shrink-0 flex items-center gap-2">
-          {/* Notification Settings Toggle */}
-          <button
-            onClick={() => setIsNotificationModalOpen(true)}
-            className="p-2 bg-slate-50 hover:bg-slate-100 text-slate-600 rounded-xl border border-slate-200/60 cursor-pointer transition-all flex items-center justify-center relative min-h-[36px] min-w-[36px]"
-            title="Configurações de Notificação"
-          >
-            <Bell className={`w-4 h-4 ${notificationsEnabled ? 'text-rose-500 animate-swing' : 'text-slate-400'}`} />
-            {notificationsEnabled && (
-              <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 bg-rose-500 rounded-full ring-2 ring-white animate-pulse" />
-            )}
-          </button>
-
           {isGuestMode ? (
             <div className="flex items-center gap-1.5 bg-rose-50 border border-rose-100/50 text-rose-600 px-3 py-2 rounded-xl text-[10px] font-bold tracking-wider font-mono">
               <span className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse" />
@@ -173,7 +150,6 @@ export const Header: React.FC<HeaderProps> = ({
         </div>
 
       </div>
-      <NotificationSettingsModal isOpen={isNotificationModalOpen} onClose={() => setIsNotificationModalOpen(false)} />
     </header>
   );
 };

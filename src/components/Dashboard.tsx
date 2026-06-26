@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Calendar, 
   Pin, 
@@ -17,10 +17,12 @@ import {
   CheckSquare,
   Brain,
   Globe,
-  Users
+  Users,
+  Bell
 } from 'lucide-react';
 import { motion } from 'motion/react';
 import { AgendaItem, RecadoItem, MemoriaItem, CartinhaItem, ConversaRoom, ConteudoFile, TimezoneAlarm, ProfilePermissions } from '../types';
+import { notificationService } from '../utils/notificationService';
 
 interface DashboardProps {
   currentTab: 'meu-mundo' | 'compartilhado';
@@ -55,6 +57,15 @@ export const Dashboard: React.FC<DashboardProps> = ({
   isAdmin = false,
   permissions,
 }) => {
+  const [notificationSettings, setNotificationSettings] = useState(() => notificationService.getSettings());
+
+  useEffect(() => {
+    const checkInterval = setInterval(() => {
+      setNotificationSettings(notificationService.getSettings());
+    }, 1000);
+    return () => clearInterval(checkInterval);
+  }, []);
+
   // Quick helper to check permission level
   const hasAccess = (panelKey: keyof ProfilePermissions) => {
     if (isAdmin) return true;
@@ -321,6 +332,44 @@ export const Dashboard: React.FC<DashboardProps> = ({
                 </div>
               </motion.div>
             )}
+
+            {/* PANEL: NOTIFICAÇÕES */}
+            <motion.div 
+              variants={itemVariants}
+              onClick={() => onSelectPanel('notificacoes')}
+              className="bg-white rounded-3xl p-6 border border-slate-100 hover:border-rose-100 shadow-xs hover:shadow-md transition-all cursor-pointer group flex flex-col justify-between h-[240px]"
+              id="card-notificacoes"
+            >
+              <div>
+                <div className="flex justify-between items-start">
+                  <div className="p-3 bg-rose-50 text-rose-500 rounded-2xl group-hover:bg-rose-500 group-hover:text-white transition-colors duration-300">
+                    <Bell className="w-6 h-6" />
+                  </div>
+                  <span className="text-xs font-mono text-slate-400">PAINEL 06</span>
+                </div>
+                <h3 className="font-display font-bold text-xl text-slate-800 mt-4 group-hover:text-rose-600 transition-colors">
+                  Notificações Ativas
+                </h3>
+                <p className="text-xs text-slate-400 mt-1">
+                  Gerencie avisos sonoros e canais de lembrete em tempo real para não perder nada.
+                </p>
+              </div>
+              <div className="flex justify-between items-center pt-4 border-t border-slate-50">
+                <div className="flex items-center gap-2">
+                  <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold font-mono ${
+                    notificationSettings.enabled 
+                      ? 'bg-emerald-50 text-emerald-600 border border-emerald-200' 
+                      : 'bg-slate-100 text-slate-500 border border-slate-200'
+                  }`}>
+                    {notificationSettings.enabled ? '● Ativas' : '○ Inativas'}
+                  </span>
+                  <span className="text-[10px] text-slate-400 font-medium">
+                    {Object.values(notificationSettings).filter(Boolean).length - 1} canais ativos
+                  </span>
+                </div>
+                <ArrowRight className="w-4 h-4 text-slate-300 group-hover:text-rose-500 group-hover:translate-x-1 transition-all" />
+              </div>
+            </motion.div>
 
             {/* ADMIN-ONLY PANEL: GESTÃO DE PERFIS */}
             {isAdmin && (

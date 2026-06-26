@@ -19,6 +19,7 @@ import { ConteudosPanel } from './components/ConteudosPanel';
 import { TimezonePanel } from './components/TimezonePanel';
 import { Entrance } from './components/Entrance';
 import { ProfilePanel } from './components/ProfilePanel';
+import { NotificationSettingsPanel } from './components/NotificationSettingsPanel';
 import { NotificationToastContainer } from './components/NotificationToastContainer';
 import { notificationService } from './utils/notificationService';
 
@@ -1094,6 +1095,12 @@ export default function App() {
                 onAddProfile={handleAddProfile}
                 onUpdateProfilePermissions={handleUpdateProfilePermissions}
                 onDeleteProfile={handleDeleteProfile}
+              />
+            )}
+
+            {activePanelId === 'notificacoes' && (
+              <NotificationSettingsPanel 
+                onBack={() => handleSelectPanel(null)}
               />
             )}
           </div>
