@@ -75,10 +75,10 @@ export const NotificationSettingsModal: React.FC<NotificationSettingsModalProps>
         initial={{ opacity: 0, scale: 0.95, y: 15 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.95, y: 15 }}
-        className="relative bg-white rounded-3xl shadow-xl border border-slate-100 max-w-md w-full overflow-hidden z-10"
+        className="relative bg-white rounded-3xl shadow-xl border border-slate-100 max-w-md w-full max-h-[90vh] flex flex-col overflow-hidden z-10"
       >
         {/* Header */}
-        <div className="p-6 pb-4 border-b border-slate-50 flex items-center justify-between">
+        <div className="p-6 pb-4 border-b border-slate-50 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-2.5">
             <div className="p-2 bg-rose-50 text-rose-500 rounded-xl">
               <Bell className="w-5 h-5 animate-bounce" style={{ animationDuration: '3s' }} />
@@ -99,7 +99,7 @@ export const NotificationSettingsModal: React.FC<NotificationSettingsModalProps>
         </div>
 
         {/* Content */}
-        <div className="p-6 space-y-5 max-h-[75vh] overflow-y-auto">
+        <div className="p-6 space-y-5 flex-1 overflow-y-auto">
           
           {/* Permission Status Alert */}
           <div className={`p-4 rounded-2xl border text-xs flex items-start gap-3 ${
@@ -308,7 +308,7 @@ export const NotificationSettingsModal: React.FC<NotificationSettingsModalProps>
         </div>
 
         {/* Action Footer */}
-        <div className="p-6 bg-slate-50 border-t border-slate-100 flex gap-3">
+        <div className="p-6 bg-slate-50 border-t border-slate-100 flex gap-3 shrink-0">
           <button
             onClick={handleTestNotification}
             className="flex-1 py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold shadow-sm transition-colors cursor-pointer flex items-center justify-center gap-2"
