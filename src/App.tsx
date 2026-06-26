@@ -778,7 +778,7 @@ export default function App() {
           window.location.hash = '';
         }}
         onBack={() => handleSelectPanel(null)}
-        isGuestMode={isGuestMode || !currentProfile?.isAdmin}
+        isGuestMode={isGuestMode}
         currentProfileName={currentProfile?.name}
         onLogout={handleLogout}
       />

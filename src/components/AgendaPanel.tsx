@@ -574,13 +574,15 @@ export const AgendaPanel: React.FC<AgendaPanelProps> = ({
                     </span>
                     <div className="flex items-center gap-1.5">
                       {getPriorityBadge(item.priority)}
-                      <button 
-                        onClick={() => onUpdateStatus(item.id, 'doing')}
-                        className="p-1 rounded-md border border-slate-100 text-blue-500 hover:bg-blue-50 transition-colors cursor-pointer"
-                        title="Mover para Fazendo"
-                      >
-                        <ArrowRight className="w-3 h-3" />
-                      </button>
+                      {!isReadOnly && (
+                        <button 
+                          onClick={() => onUpdateStatus(item.id, 'doing')}
+                          className="p-1 rounded-md border border-slate-100 text-blue-500 hover:bg-blue-50 transition-colors cursor-pointer"
+                          title="Mover para Fazendo"
+                        >
+                          <ArrowRight className="w-3 h-3" />
+                        </button>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -620,22 +622,24 @@ export const AgendaPanel: React.FC<AgendaPanelProps> = ({
                     </span>
                     <div className="flex items-center gap-1.5">
                       {getPriorityBadge(item.priority)}
-                      <div className="flex gap-1">
-                        <button 
-                          onClick={() => onUpdateStatus(item.id, 'todo')}
-                          className="p-1 rounded-md border border-slate-100 text-slate-500 hover:bg-slate-50 transition-colors cursor-pointer"
-                          title="Voltar para A Fazer"
-                        >
-                          <ArrowLeft className="w-3 h-3" />
-                        </button>
-                        <button 
-                          onClick={() => onUpdateStatus(item.id, 'done')}
-                          className="p-1 rounded-md border border-slate-100 text-emerald-500 hover:bg-emerald-50 transition-colors cursor-pointer"
-                          title="Mover para Concluído"
-                        >
-                          <ArrowRight className="w-3 h-3" />
-                        </button>
-                      </div>
+                      {!isReadOnly && (
+                        <div className="flex gap-1">
+                          <button 
+                            onClick={() => onUpdateStatus(item.id, 'todo')}
+                            className="p-1 rounded-md border border-slate-100 text-slate-500 hover:bg-slate-50 transition-colors cursor-pointer"
+                            title="Voltar para A Fazer"
+                          >
+                            <ArrowLeft className="w-3 h-3" />
+                          </button>
+                          <button 
+                            onClick={() => onUpdateStatus(item.id, 'done')}
+                            className="p-1 rounded-md border border-slate-100 text-emerald-500 hover:bg-emerald-50 transition-colors cursor-pointer"
+                            title="Mover para Concluído"
+                          >
+                            <ArrowRight className="w-3 h-3" />
+                          </button>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
