@@ -314,10 +314,15 @@ export default function App() {
   useEffect(() => {
     if (!authReady) return;
 
-    if (isGuestMode) {
-      if (!activeRoomId) return;
-      // In Guest Mode, only subscribe to the single room they have a link for
-      const roomDocRef = doc(db, 'conversas', activeRoomId);
+    const isRestricted = isGuestMode || (currentProfile && !currentProfile.isAdmin);
+    const targetRoomId = isRestricted 
+      ? (activeRoomId || (currentProfile ? `room-${currentProfile.id}` : null))
+      : null;
+
+    if (isRestricted) {
+      if (!targetRoomId) return;
+      // In Guest Mode or non-admin Profile, only subscribe to their specific room
+      const roomDocRef = doc(db, 'conversas', targetRoomId);
       const unsubSingleRoom = onSnapshot(roomDocRef, (docSnap) => {
         if (docSnap.exists()) {
           const roomData = docSnap.data();
@@ -337,13 +342,13 @@ export default function App() {
               ...singleRoom,
               messages: oldRoom ? oldRoom.messages : []
             };
-            const merged = [updatedSingle]; // Guest only gets to see/interact with this active room
+            const merged = [updatedSingle]; // Guest or non-admin only gets to see/interact with this room
             localStorage.setItem('joao_conversas', JSON.stringify(merged));
             return merged;
           });
         }
       }, (err) => {
-        console.error(`Error listening to single room ${activeRoomId}:`, err);
+        console.error(`Error listening to single room ${targetRoomId}:`, err);
       });
 
       return () => unsubSingleRoom();
@@ -381,13 +386,18 @@ export default function App() {
 
       return () => unsubConversas();
     }
-  }, [authReady, isGuestMode, activeRoomId]);
+  }, [authReady, isGuestMode, activeRoomId, currentProfile]);
 
   // Real-Time Subcollection Messages Listener for Active Chat Room
   useEffect(() => {
-    if (!authReady || !activeRoomId) return;
+    if (!authReady) return;
 
-    const messagesColl = collection(db, 'conversas', activeRoomId, 'messages');
+    const isRestricted = isGuestMode || (currentProfile && !currentProfile.isAdmin);
+    const targetRoomId = activeRoomId || (isRestricted && currentProfile ? `room-${currentProfile.id}` : null);
+
+    if (!targetRoomId) return;
+
+    const messagesColl = collection(db, 'conversas', targetRoomId, 'messages');
 
     const unsubMessages = onSnapshot(messagesColl, (snap) => {
       const msgs: ChatMessage[] = [];
@@ -419,7 +429,7 @@ export default function App() {
 
       setConversas(prev => {
         const updated = prev.map(room => {
-          if (room.id === activeRoomId) {
+          if (room.id === targetRoomId) {
             return { ...room, messages: msgs };
           }
           return room;
@@ -428,11 +438,11 @@ export default function App() {
         return updated;
       });
     }, (err) => {
-      console.error(`Error listening to messages for active room ${activeRoomId}:`, err);
+      console.error(`Error listening to messages for active room ${targetRoomId}:`, err);
     });
 
     return () => unsubMessages();
-  }, [authReady, activeRoomId]);
+  }, [authReady, activeRoomId, isGuestMode, currentProfile]);
 
   useEffect(() => {
     if (guestName) {
@@ -475,12 +485,28 @@ export default function App() {
     ignoreHashChange.current = true;
     setActivePanelId(panelId);
     // Sync hash URL
-    if (panelId === 'conversas' && activeRoomId) {
-      window.location.hash = `#/chat/${activeRoomId}`;
+    if (panelId === 'conversas') {
+      const targetId = (currentProfile && !currentProfile.isAdmin) 
+        ? `room-${currentProfile.id}` 
+        : activeRoomId;
+      if (targetId) {
+        setActiveRoomId(targetId);
+        window.location.hash = `#/chat/${targetId}`;
+      }
     } else if (!panelId) {
       window.location.hash = '';
     }
   };
+
+  useEffect(() => {
+    if (activePanelId === 'conversas' && currentProfile && !currentProfile.isAdmin) {
+      const dedicatedRoomId = `room-${currentProfile.id}`;
+      if (activeRoomId !== dedicatedRoomId) {
+        setActiveRoomId(dedicatedRoomId);
+        window.location.hash = `#/chat/${dedicatedRoomId}`;
+      }
+    }
+  }, [activePanelId, currentProfile, activeRoomId]);
 
   const handleSelectRoom = (roomId: string | null) => {
     ignoreHashChange.current = true;
@@ -855,7 +881,7 @@ export default function App() {
                 onAddRoom={handleAddRoom}
                 onSendMessage={handleSendMessage}
                 isGuestMode={isGuestMode || !currentProfile?.isAdmin}
-                guestName={guestName}
+                guestName={currentProfile ? currentProfile.name : guestName}
                 onSetGuestName={setGuestName}
                 onDeleteRoom={handleDeleteRoom}
                 joaoStatus={joaoStatus}
