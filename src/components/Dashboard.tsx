@@ -91,17 +91,21 @@ export const Dashboard: React.FC<DashboardProps> = ({
       if (!room.messages || room.messages.length === 0) return false;
       const lastMsg = room.messages[room.messages.length - 1];
       
-      const currentUserRole = isGuestMode ? 'guest' : 'owner';
+      const currentSender = isGuestMode ? 'guest' : 'owner';
       const guestName = localStorage.getItem('joao_guest_name') || '';
-      const isFromSelf = isGuestMode 
-        ? (lastMsg.sender === 'guest' && lastMsg.senderName === guestName)
-        : lastMsg.sender === 'owner';
+      const isFromSelf = lastMsg.sender === currentSender && (
+        isGuestMode ? lastMsg.senderName === guestName : true
+      );
         
       if (isFromSelf) return false;
       
       const lastRead = lastReadTimes[room.id];
       if (!lastRead) return true;
-      return lastMsg.timestamp > lastRead;
+      
+      if (lastMsg.createdAt) {
+        return lastMsg.createdAt > lastRead;
+      }
+      return false;
     });
   };
 

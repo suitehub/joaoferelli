@@ -87,16 +87,21 @@ export const ConversasPanel: React.FC<ConversasPanelProps> = ({
     if (!room.messages || room.messages.length === 0) return false;
     
     const lastMsg = room.messages[room.messages.length - 1];
-    const isFromSelf = isGuestMode 
-      ? (lastMsg.sender === 'guest' && lastMsg.senderName === guestName)
-      : lastMsg.sender === 'owner';
+    const currentSender = isGuestMode ? 'guest' : 'owner';
+    const isFromSelf = lastMsg.sender === currentSender && (
+      isGuestMode ? lastMsg.senderName === guestName : true
+    );
       
     if (isFromSelf) return false;
     
     const lastRead = lastReadTimes[room.id];
     if (!lastRead) return true;
     
-    return lastMsg.timestamp > lastRead;
+    if (lastMsg.createdAt) {
+      return lastMsg.createdAt > lastRead;
+    }
+    
+    return false;
   };
 
   // Auto-scroll to bottom of chats
@@ -234,12 +239,22 @@ export const ConversasPanel: React.FC<ConversasPanelProps> = ({
                     <div className={`w-10 h-10 rounded-full ${room.avatarColor} text-white flex items-center justify-center font-bold shadow-2xs text-sm shrink-0 uppercase relative`}>
                       {room.name.substring(0, 2)}
                       {hasUnread(room) && (
-                        <span className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full border-2 border-white animate-pulse" />
+                        <>
+                          <span className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full border-2 border-white animate-ping" />
+                          <span className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full border-2 border-white" />
+                        </>
                       )}
                     </div>
                     <div className="flex-1 overflow-hidden pr-6">
                       <div className="flex justify-between items-baseline">
-                        <h4 className="font-display font-bold text-xs truncate">{room.name}</h4>
+                        <div className="flex items-center gap-1.5 min-w-0">
+                          <h4 className={`font-display font-bold text-xs truncate ${hasUnread(room) ? 'text-red-600' : ''}`}>
+                            {room.name}
+                          </h4>
+                          {hasUnread(room) && (
+                            <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse shrink-0" />
+                          )}
+                        </div>
                         {lastMsg && <span className="text-[9px] font-mono text-slate-400">{lastMsg.timestamp}</span>}
                       </div>
                       <p className="text-[10px] text-slate-400 truncate mt-0.5">

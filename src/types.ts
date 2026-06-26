@@ -57,6 +57,7 @@ export interface ChatMessage {
   senderName: string;
   text: string;
   timestamp: string; // HH:MM or ISO string
+  createdAt?: string; // ISO string for precise real-time notifications
 }
 
 export interface ConversaRoom {

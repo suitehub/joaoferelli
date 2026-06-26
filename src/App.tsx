@@ -511,18 +511,18 @@ export default function App() {
             const msg = change.doc.data() as ChatMessage;
             
             // Check if this message was sent after the app loaded
-            const msgTime = Date.parse(msg.timestamp || '');
-            const isHistorical = isNaN(msgTime) || msgTime <= appStartTime.current;
+            const msgTimeStr = msg.createdAt || msg.timestamp;
+            const msgTime = Date.parse(msgTimeStr || '');
+            const isHistorical = !msg.createdAt || isNaN(msgTime) || msgTime <= appStartTime.current;
             
             if (!isHistorical) {
               // Determine if we should notify
               // 1. Don't notify if the message was sent by the current user
               const currentUserRole = currentProfile?.isAdmin ? 'owner' : 'guest';
-              const isFromSelf = msg.sender === currentUserRole;
+              const isFromSelf = msg.sender === currentUserRole && (
+                currentUserRole === 'guest' ? msg.senderName === guestName : true
+              );
               
-              // 2. Don't notify if the user is actively viewing this room and the conversation panel is open
-              const isCurrentlyViewing = activePanelId === 'conversas' && activeRoomId === roomId;
-
               if (!isFromSelf) {
                 // Find room name
                 const room = conversas.find(r => r.id === roomId);
@@ -825,7 +825,8 @@ export default function App() {
       sender: currentSender,
       senderName: currentName || 'Visitante',
       text,
-      timestamp: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+      timestamp: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
+      createdAt: new Date().toISOString()
     };
     addChatMessageDb(roomId, newMessage);
   };

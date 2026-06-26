@@ -127,7 +127,14 @@ export const notificationService = {
     if (!settings.enabled) return;
 
     // Check individual category setting
-    if (type !== 'system' && !settings[type as keyof Omit<NotificationSettings, 'enabled' | 'sound'>]) {
+    let isCategoryEnabled = true;
+    if (type === 'message') isCategoryEnabled = settings.messages;
+    else if (type === 'alarm') isCategoryEnabled = settings.alarms;
+    else if (type === 'agenda') isCategoryEnabled = settings.agenda;
+    else if (type === 'recado') isCategoryEnabled = settings.recados;
+    else if (type === 'cartinha') isCategoryEnabled = settings.cartinhas;
+
+    if (type !== 'system' && !isCategoryEnabled) {
       return;
     }
 
