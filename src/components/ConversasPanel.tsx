@@ -201,7 +201,7 @@ export const ConversasPanel: React.FC<ConversasPanelProps> = ({
         
         {/* ROOMS SIDE LIST (Hidden in Guest Mode or on mobile if a room is active) */}
         {!isGuestMode && (
-          <div className={`md:col-span-1 border-r border-slate-100 flex flex-col h-full bg-slate-50/50 ${
+          <div className={`md:col-span-1 border-r border-slate-100 flex flex-col h-full bg-slate-50/50 min-h-0 ${
             isRoomActive ? 'hidden md:flex' : 'flex'
           }`}>
             <div className="p-4 border-b border-slate-100 bg-white flex justify-between items-center shrink-0">
@@ -284,7 +284,7 @@ export const ConversasPanel: React.FC<ConversasPanelProps> = ({
 
         {/* ACTIVE CHAT SCREEN (Spans full width in guest mode) */}
         {isRoomActive && activeRoom ? (
-          <div className={`${isGuestMode ? 'col-span-1 md:col-span-3' : 'md:col-span-2'} flex flex-col h-full bg-[#fdfdfc]`}>
+          <div className={`${isGuestMode ? 'col-span-1 md:col-span-3' : 'md:col-span-2'} flex flex-col h-full bg-[#fdfdfc] min-h-0`}>
             
             {/* Active chat header */}
             <div className="p-4 border-b border-slate-100 bg-white flex items-center justify-between shrink-0">

@@ -523,7 +523,9 @@ export default function App() {
                 currentUserRole === 'guest' ? msg.senderName === guestName : true
               );
               
-              if (!isFromSelf) {
+              const isCurrentlyViewing = activePanelId === 'conversas' && activeRoomId === roomId;
+              
+              if (!isFromSelf && !isCurrentlyViewing) {
                 // Find room name
                 const room = conversas.find(r => r.id === roomId);
                 const roomName = room ? room.name : 'Conversas';
